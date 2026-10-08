@@ -1,0 +1,1 @@
+ALTER TABLE "order_items" ALTER COLUMN "quantity" SET DATA TYPE real USING "quantity"::real;

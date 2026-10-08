@@ -1,0 +1,2 @@
+ALTER TABLE "orders" DROP CONSTRAINT "orders_customerId_users_id_fkey";--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_customerId_customers_id_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id");

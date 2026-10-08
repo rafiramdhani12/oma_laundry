@@ -1,15 +1,45 @@
-import {serial ,pgTable , varchar , integer, pgEnum} from "drizzle-orm/pg-core"
-import { users } from "./users.ts"
-import { services } from "./services.ts"
+import {
+    pgTable,
+    serial,
+    integer,
+    pgEnum,
+    timestamp,
+    varchar
+} from "drizzle-orm/pg-core";
 
-export const enumStatus = pgEnum("status" , ["diterima" , "diproses" , "siap"])
+import { customers } from "./customers.ts";
 
-export const orders = pgTable("users" , {
-    id:serial().primaryKey(),
-    customerId : integer().references(() => users.id),
-    servicesId : integer().references(() => services.id),
-    quantity : integer().notNull(),
-    unitPrice: integer().notNull(),
-    totalPrice : integer().notNull(),
-    status : enumStatus().notNull()
-})
+export const enumStatus = pgEnum("order_status", [
+    "diterima",
+    "diproses",
+    "siap",
+    "diambil"
+]);
+
+export const orders = pgTable("orders", {
+    id: serial().primaryKey(),
+
+    orderNumber: varchar({ length: 30 })
+        .notNull()
+        .unique(),
+
+    customerId: integer()
+        .notNull()
+        .references(() => customers.id),
+
+    status: enumStatus()
+        .notNull()
+        .default("diterima"),
+
+    totalPrice: integer()
+        .notNull()
+        .default(0),
+
+    createdAt: timestamp()
+        .notNull()
+        .defaultNow(),
+
+    updatedAt: timestamp()
+        .notNull()
+        .defaultNow(),
+});
