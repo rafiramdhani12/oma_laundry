@@ -24,25 +24,47 @@ export const readPaymentByOrderId = async (orderId: number) => {
 };
 
 export const createPayment = async (
-    orderId: number,
-    amount: number,
-    paymentMethod: "cash" | "transfer"
+orderId: number,
+amount: number,
+paymentMethod: "cash" | "transfer"
 ) => {
+return await db.transaction(async (tx) => {
+const order = await tx
+.select()
+.from(orders)
+.where(eq(orders.id, orderId))
+.for("update");
 
-    const order = await db
-        .select()
-        .from(orders)
-        .where(eq(orders.id, orderId));
 
     if (order.length === 0) {
         throw new Error("Order not found");
     }
 
-    if (amount !== order[0].totalPrice) {
-        throw new Error("Payment amount does not match order total");
+    if (!Number.isInteger(amount) || amount <= 0) {
+        throw new Error("Payment amount must be a positive integer");
     }
 
-    return await db
+    const existingPayments = await tx
+        .select()
+        .from(payments)
+        .where(eq(payments.orderId, orderId));
+
+    const paidAmount = existingPayments.reduce(
+        (total, payment) => total + payment.amount,
+        0
+    );
+
+    const remainingAmount = order[0].totalPrice - paidAmount;
+
+    if (remainingAmount <= 0) {
+        throw new Error("Order has already been fully paid");
+    }
+
+    if (amount > remainingAmount) {
+        throw new Error("Payment exceeds remaining balance");
+    }
+
+    return await tx
         .insert(payments)
         .values({
             orderId,
@@ -50,7 +72,10 @@ export const createPayment = async (
             paymentMethod
         })
         .returning();
+});
+
 };
+
 
 export const deletePayment = async (id: number) => {
     return await db

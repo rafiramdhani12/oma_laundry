@@ -18,7 +18,6 @@ export const payments = pgTable("payments", {
 
     orderId: integer()
         .notNull()
-        .unique()
         .references(() => orders.id, {
             onDelete: "cascade"
         }),

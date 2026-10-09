@@ -1,0 +1,123 @@
+
+/* Nota disembunyikan di tampilan aplikasi biasa */
+.receipt-print-area {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .receipt-print-area,
+  .receipt-print-area * {
+    visibility: visible !important;
+  }
+
+  .receipt-print-area {
+    display: block !important;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    color: #111 !important;
+    background: #fff !important;
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
+  }
+
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .receipt-header h1 {
+    margin: 0;
+    font-size: 22pt;
+    font-weight: 700;
+  }
+
+  .receipt-header p {
+    margin-top: 5px;
+    font-size: 10pt;
+  }
+
+  .receipt-print-area hr {
+    border: 0;
+    border-top: 1px solid #aaa;
+    margin: 14px 0;
+  }
+
+  .receipt-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .receipt-info div,
+  .receipt-totals div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .receipt-info span,
+  .receipt-totals span {
+    color: #555;
+    font-size: 9pt;
+  }
+
+  .receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+  }
+
+  .receipt-table th,
+  .receipt-table td {
+    padding: 8px 5px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .receipt-table th:last-child,
+  .receipt-table td:last-child {
+    text-align: right;
+  }
+
+  .receipt-totals {
+    display: grid;
+    gap: 10px;
+    margin-left: auto;
+    max-width: 280px;
+  }
+
+  .receipt-totals div {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .receipt-print-area h2 {
+    font-size: 12pt;
+  }
+
+  .receipt-footer {
+    margin-top: 28px;
+    text-align: center;
+    font-size: 9pt;
+  }
+
+  .receipt-table thead {
+    display: table-header-group;
+  }
+
+  .receipt-table tr {
+    break-inside: avoid;
+  }
+}

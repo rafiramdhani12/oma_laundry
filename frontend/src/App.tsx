@@ -4,8 +4,9 @@ import Dashboard from "./pages/Dashboard"
 import Services from "./pages/Services"
 import Users from "./pages/Users"
 import Customers from "./pages/Customers"
-import Orders from "./pages/Orders"
+import Orders from "./pages/order_pages/Orders"
 import CreatePage from "./pages/order_pages/CreatePage"
+import DetailPage from "./pages/order_pages/DetailPage"
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       <Route path="/customers" element={<Customers />} />
       <Route path="/orders" element={<Orders />} />
       <Route path="/orders/create" element={<CreatePage />} />
+      <Route path="/orders/detail/:id" element={<DetailPage />} />
      </Routes>
     </>
   )

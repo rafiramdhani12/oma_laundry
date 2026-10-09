@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import Layout from "../components/Layout";
-import { useOrders } from "../hooks/useOrders";
+import Layout from "../../components/Layout";
+import { useOrders } from "../../hooks/useOrders";
 
 const formatRupiah = (amount: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -101,7 +101,7 @@ const Orders = () => {
                         type="button"
                         className="btn btn-sm btn-ghost"
                         onClick={() =>
-                          navigate(`/orders/${order.id}`)
+                          navigate(`/orders/detail/${order.id}`)
                         }
                       >
                         Detail
