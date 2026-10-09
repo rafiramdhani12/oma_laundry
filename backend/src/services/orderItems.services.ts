@@ -2,7 +2,7 @@ import db from "../config/db.ts";
 import { orderItems } from "../config/schema/orderItems.ts";
 import { eq } from "drizzle-orm";
 
-export const getOrderItems = async (orderId: number) => {
+export const getOrdersItems = async (orderId: number) => {
     return await db
         .select()
         .from(orderItems)

@@ -42,6 +42,16 @@ export const login = async (
         }
     );
 
+    console.log("Username received:", JSON.stringify(name));
+console.log("User found:", result.length > 0);
+
+if (result.length > 0) {
+  console.log(
+    "Password matches:",
+    await bcrypt.compare(password, result[0].password)
+  );
+}
+
     return {
         token,
         user: {

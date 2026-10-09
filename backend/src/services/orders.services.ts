@@ -4,13 +4,13 @@ import { orderItems } from "../config/schema/orderItems.ts";
 import { services } from "../config/schema/services.ts";
 import { eq } from "drizzle-orm";
 
-export const getAllOrders = async () => {
+export const readAllOrders = async () => {
     return await db
         .select()
         .from(orders);
 };
 
-export const getOrderById = async (id: number) => {
+export const readOrderById = async (id: number) => {
     return await db
         .select()
         .from(orders)

@@ -3,20 +3,20 @@ import { payments } from "../config/schema/payment.ts";
 import { orders } from "../config/schema/orders.ts";
 import { eq } from "drizzle-orm";
 
-export const getAllPayments = async () => {
+export const readAllPayments = async () => {
     return await db
         .select()
         .from(payments);
 };
 
-export const getPaymentById = async (id: number) => {
+export const readPaymentById = async (id: number) => {
     return await db
         .select()
         .from(payments)
         .where(eq(payments.id, id));
 };
 
-export const getPaymentByOrderId = async (orderId: number) => {
+export const readPaymentByOrderId = async (orderId: number) => {
     return await db
         .select()
         .from(payments)
