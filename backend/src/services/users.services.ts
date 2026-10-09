@@ -10,11 +10,11 @@ const hashPassword = (password : string) => {
 }
 
 export const getAllUsers = async () => {
-    return await db.select().from(users)
+    return await db.select({id: users.id , name: users.name , role: users.role}).from(users)
 }
 
 export const getUserById = async (id : number) => {
-    return await db.select().from(users).where(eq(users.id , id))
+    return await db.select({id: users.id , name: users.name , role: users.role}).from(users).where(eq(users.id , id))
 }
 
 export const createUser = async (name : string , password : string , role : "worker") => {
