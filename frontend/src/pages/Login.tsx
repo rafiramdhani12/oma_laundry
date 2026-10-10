@@ -1,7 +1,7 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import useLogin from "../hooks/useAuth.tsx";
+import {useLogin} from "../hooks/useAuth.tsx";
 
 const Login = () => {
     const navigate = useNavigate();

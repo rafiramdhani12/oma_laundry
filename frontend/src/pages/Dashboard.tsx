@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Layout from "../components/Layout";
 import Table, { type ColumnType } from "../components/Table";
-import { useOrders } from "../hooks/useOrders";
+import { useRecentOrders } from "../hooks/useOrders";
 
 const formatRupiah = (amount: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -26,7 +26,7 @@ const Dashboard = () => {
     data: orders,
     isLoading,
     isError,
-  } = useOrders();
+  } = useRecentOrders();
 
   const tableColumns: ColumnType[] = [
     { header: "ID", accessor: "orderId" },

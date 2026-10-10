@@ -61,3 +61,11 @@ if (result.length > 0) {
         }
     };
 };
+
+// notes jwt itu stateless jadi perliaku nya ada di bagian client
+
+export const logout = async () => {
+    return {
+        message: "Logout successfull"
+    }
+}

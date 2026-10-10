@@ -1,6 +1,6 @@
 import { Router } from "express"; 
 
-import {getAllOrders , getOrderById , createNewOrder , updateOrderStatusById , deleteOrderById, getOrderToday, getAllOrdersWithSummary, getOrdersByDetail  } from "../controllers/orders.controller.ts";
+import {getAllOrders , getOrderById , createNewOrder , updateOrderStatusById , deleteOrderById, getOrderToday, getAllOrdersWithSummary, getOrdersByDetail, getRecentOrders  } from "../controllers/orders.controller.ts";
 
 const ordersRoute = Router();
 
@@ -10,6 +10,7 @@ ordersRoute.get("/today", getOrderToday);
 ordersRoute.get("/summary", getAllOrdersWithSummary);
 ordersRoute.get("/detail/:id", getOrdersByDetail);
 ordersRoute.get("/:id", getOrderById);
+ordersRoute.get("/recent", getRecentOrders);
 
 // post
 ordersRoute.post("/", createNewOrder);

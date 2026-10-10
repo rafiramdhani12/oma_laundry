@@ -16,6 +16,7 @@ export const queryKeys = {
     all: ["orders"] as const,
     list: ["orders", "summary"] as const,
     today: ["orders", "today"] as const,
+    recent: ["orders", "recent"] as const,
     detail: (id: number) => ["orders", "detail", id] as const,
   },
   orderItems: {

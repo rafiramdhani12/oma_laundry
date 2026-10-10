@@ -113,6 +113,19 @@ export const readOrderDetail = async (id: number) => {
     return { ...order, items, payment: payment ?? null };
 };
 
+// fungsi agregat
+
+export const readRecentOrders = async () => {
+
+    return await db
+        .select(orderSummaryColumns)
+        .from(orders)
+        .innerJoin(customers, eq(orders.customerId, customers.id))
+        .leftJoin(payments, eq(payments.orderId, orders.id))
+        .orderBy(desc(orders.createdAt))
+        .limit(5);
+}
+
 export const createOrder = async (
     customerId: number,
     items: {

@@ -36,6 +36,11 @@ export const getOrderToday = async (req : Request , res : Response) => {
     res.json(orders)
 }
 
+export const getRecentOrders = async (req : Request , res : Response) => {
+    const orders = await readOrdersToday()
+    res.json(orders)
+}
+
 export const deleteOrderById = async (req : Request , res : Response) => {
     const {id} = req.params
     const order = await deleteOrder(Number(id))

@@ -33,6 +33,14 @@ export const useOrderDetail = (id: number) =>
     enabled: !!id,
   });
 
+  // GET recent orders untuk dashboard
+  export const useRecentOrders = () =>
+  useQuery({
+    queryKey: queryKeys.orders.recent,
+    queryFn: async () =>
+      (await api.get<OrderListItem[]>("/orders/recent")).data,
+  })
+
 // POST /orders
 export const useCreateOrder = () => {
   const queryClient = useQueryClient();

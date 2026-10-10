@@ -16,7 +16,7 @@ type LoginResponse = {
     };
 };
 
-const useLogin = () => {
+export const useLogin = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
@@ -40,4 +40,14 @@ const useLogin = () => {
     });
 };
 
-export default useLogin;
+export const useLogout = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async () => (await api.post("/auth/logout")).data,
+        onSettled: () => {
+            localStorage.removeItem("token");
+            queryClient.clear()
+        },
+    });
+}

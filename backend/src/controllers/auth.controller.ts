@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { login } from "../services/auth.services.ts";
+import { login, logout } from "../services/auth.services.ts";
 
 export const loginUser = async (
     req: Request,
@@ -28,3 +28,8 @@ export const loginUser = async (
 
     }
 };
+
+export const logoutUser = async (req : Request , res : Response) => {
+    const result = await logout()
+    res.json(result)
+}

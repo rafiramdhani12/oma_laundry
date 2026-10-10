@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useLogout } from "../hooks/useAuth";
 
 type LayoutProps = {
     children: ReactNode;
@@ -96,6 +97,19 @@ const MenuItem = ({
 
 const Layout = ({ children }: LayoutProps) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const navigate = useNavigate()
+    const {mutate : logout , isPending} = useLogout();
+    const handleLogout = () => {
+        try {
+            logout(undefined , {
+                onSettled: () => {
+                    navigate("/")
+                }
+            })
+        } catch (error) {
+            console.log(error);
+        }
+    }
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -169,8 +183,8 @@ const Layout = ({ children }: LayoutProps) => {
                     </nav>
                     
                     <div className="mt-auto pt-4">
-                        <button className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 w-full text-white transition">
-                            Logout
+                        <button onClick={() => handleLogout()} className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 w-full text-white transition">
+                            {isPending ? "Loading..." : "Logout"}
                         </button>
                     </div>
                 </aside>
