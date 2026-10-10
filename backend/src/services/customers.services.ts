@@ -11,7 +11,7 @@ export const readById = async (id : number) => {
 }
 
 export const createCustomer = async (name : string , phone : string) => {
-    return await db.insert(customers).values({name , phone})
+    return await db.insert(customers).values({name , phone}).returning()
 }
 
 export const updateCustomer = async (id : number , name : string , phone : string) => {

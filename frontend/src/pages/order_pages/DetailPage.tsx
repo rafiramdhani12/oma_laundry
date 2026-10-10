@@ -228,7 +228,65 @@ const DetailPage = () => {
               </div>
             </div>
 
-            {/* PEMBAYARAN */}
+           
+            {/* STATUS LAUNDRY */}
+            <div className="card border border-base-300 bg-base-100">
+              <div className="card-body">
+                <h2 className="card-title">Update Status</h2>
+
+                <label htmlFor="order-status" className="label">
+                  Status Laundry
+                </label>
+
+                <select
+                  id="order-status"
+                  className="select select-bordered w-full"
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as OrderStatus)
+                  }
+                  disabled={updateStatus.isPending}
+                >
+                  {statuses.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+
+                {message && (
+                  <p
+                    role="status"
+                    className={
+                      message.startsWith("Gagal") ||
+                      message.startsWith("ID")
+                        ? "text-sm text-error"
+                        : "text-sm text-success"
+                    }
+                  >
+                    {message}
+                  </p>
+                )}
+
+                <div className="card-actions justify-end">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleUpdateStatus}
+                    disabled={
+                      updateStatus.isPending || status === order.status
+                    }
+                  >
+                    {updateStatus.isPending && (
+                      <span className="loading loading-spinner loading-sm" />
+                    )}
+                    Simpan Status
+                  </button>
+                </div>
+              </div>
+            </div>
+
+             {/* PEMBAYARAN */}
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body space-y-4">
                 <h2 className="card-title">Pembayaran</h2>
@@ -421,62 +479,6 @@ const DetailPage = () => {
               </div>
             </div>
 
-            {/* STATUS LAUNDRY */}
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body">
-                <h2 className="card-title">Update Status</h2>
-
-                <label htmlFor="order-status" className="label">
-                  Status Laundry
-                </label>
-
-                <select
-                  id="order-status"
-                  className="select select-bordered w-full"
-                  value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value as OrderStatus)
-                  }
-                  disabled={updateStatus.isPending}
-                >
-                  {statuses.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-
-                {message && (
-                  <p
-                    role="status"
-                    className={
-                      message.startsWith("Gagal") ||
-                      message.startsWith("ID")
-                        ? "text-sm text-error"
-                        : "text-sm text-success"
-                    }
-                  >
-                    {message}
-                  </p>
-                )}
-
-                <div className="card-actions justify-end">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={handleUpdateStatus}
-                    disabled={
-                      updateStatus.isPending || status === order.status
-                    }
-                  >
-                    {updateStatus.isPending && (
-                      <span className="loading loading-spinner loading-sm" />
-                    )}
-                    Simpan Status
-                  </button>
-                </div>
-              </div>
-            </div>
           </>
         )}
       </section>

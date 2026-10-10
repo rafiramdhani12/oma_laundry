@@ -14,7 +14,7 @@ export const getCustomerById = async (req : Request , res : Response) => {
 
 export const addNewCustomer = async (req : Request , res : Response) => {
     const {name , phone} = req.body
-    const customer = await createCustomer(name , phone)
+    const [customer] = await createCustomer(name , phone)
     res.json(customer)
 }
 
