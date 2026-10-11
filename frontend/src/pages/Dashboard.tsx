@@ -1,170 +1,86 @@
 import { useNavigate } from "react-router-dom";
-import Card from "../components/Card";
 import Layout from "../components/Layout";
-import Table, { type ColumnType } from "../components/Table";
-import { useRecentOrders } from "../hooks/useOrders";
+import RecentOrders from "../components/RecentOrders";
+import StatCard, { type StatCardProps, type Tone } from "../components/StatCard";
+import { useOrderStats, useRecentOrders } from "../hooks/useOrders";
+import type { OrderStatus } from "../interface";
+import { formatDate, formatRupiah } from "../utils/format";
+import { STATUS_LABEL } from "../utils/status";
 
-const formatRupiah = (amount: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-
-const formatDate = (date: string) =>
-  new Date(date).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+// Status aktif yang dipantau di dashboard
+const STATUS_CARDS: { status: OrderStatus; icon: string; tone: Tone }[] = [
+  { status: "diterima", icon: "📥", tone: "amber" },
+  { status: "diproses", icon: "🫧", tone: "sky" },
+  { status: "siap", icon: "🛍️", tone: "emerald" },
+];
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const date = new Date();
+  const recent = useRecentOrders();
+  const stats = useOrderStats();
 
-  const {
-    data: orders,
-    isLoading,
-    isError,
-  } = useRecentOrders();
+  // undefined = loading (skeleton), "-" = gagal
+  const fallback = stats.isError ? "-" : undefined;
+  const s = stats.data;
 
-  const tableColumns: ColumnType[] = [
-    { header: "ID", accessor: "orderId" },
-    { header: "Pelanggan", accessor: "customerName" },
-    { header: "Layanan", accessor: "services" },
-    { header: "Status", accessor: "status" },
-    { header: "Berat", accessor: "berat" },
-    { header: "Unit", accessor: "unit" },
-    { header: "Total", accessor: "total" },
+  const cards: StatCardProps[] = [
     {
-      header: "Action",
-      render: (row) => (
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={() => navigate(`/orders/${row.orderId}`)}
-        >
-          Detail
-        </button>
-      ),
-    },
-  ];
-
-  // Adaptasi response API ke format tabel dashboard.
-  const tableData = (orders ?? []).map((order) => ({
-    orderId: order.id,
-    customerName: order.customerName,
-    services: "-",
-    status: order.status,
-    berat: "-",
-    unit: "-",
-    total: formatRupiah(Number(order.totalPrice)),
-  }));
-
-  const cardList = [
-    {
-      id: 1,
-      title: "Order Today",
-      value: (orders ?? []).filter(
-        (order) =>
-          new Date(order.createdAt).toDateString() === date.toDateString()
-      ).length,
-  },
-    {
-      id: 2,
       title: "Revenue Today",
-      value: formatRupiah(
-        (orders ?? [])
-          .filter(
-            (order) =>
-              new Date(order.createdAt).toDateString() ===
-              date.toDateString()
-          )
-          .reduce(
-            (total, order) => total + Number(order.totalPrice),
-            0
-          )
-      ),
+      icon: "💰",
+      tone: "indigo",
+      value: s ? formatRupiah(s.todayRevenue) : fallback,
+      className: "col-span-2 lg:col-span-1", // full width di HP
     },
     {
-      id: 3,
-      title: "Status (Processed)",
-      value: (orders ?? []).filter(
-        (order) => order.status === "diproses"
-      ).length,
+      title: "Order Today",
+      icon: "🧺",
+      tone: "indigo",
+      value: s?.todayOrders ?? fallback,
     },
-    {
-      id: 4,
-      title: "Status (Pending)",
-      value: (orders ?? []).filter(
-        (order) => order.status === "diterima"
-      ).length,
-    },
-    {
-      id: 5,
-      title: "Selesai (Done)",
-      value: (orders ?? []).filter(
-        (order) => order.status === "siap"
-      ).length,
-    },
+    ...STATUS_CARDS.map(({ status, icon, tone }) => ({
+      title: STATUS_LABEL[status],
+      icon,
+      tone,
+      value: s?.statusCount[status] ?? fallback,
+    })),
   ];
 
   return (
     <Layout>
-      <div className="flex flex-col gap-6">
-        {/* Header */}
-        <div>
-          <h5 className="mb-2 text-sm text-gray-500">
-            Sistem internal Oma Laundry
-          </h5>
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:gap-6">
+        {/* Banner */}
+        <section className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-5 text-white shadow-lg sm:p-6">
+          <p className="text-sm text-indigo-100">Sistem internal Oma Laundry</p>
 
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
+          <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
+              <p className="mt-1 text-sm text-indigo-100">{formatDate(new Date())}</p>
+            </div>
 
             <button
               type="button"
-              className="btn btn-primary w-full rounded-2xl sm:w-auto"
               onClick={() => navigate("/orders/create")}
+              className="btn w-full border-0 bg-white text-indigo-600 shadow hover:bg-indigo-50 sm:w-auto"
             >
               + Buat Order
             </button>
           </div>
+        </section>
 
-          <p className="mt-2 text-sm text-gray-500">
-            {formatDate(date.toISOString())}
-          </p>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {cardList.map((card) => (
-            <Card
-              key={card.id}
-              title={card.title}
-              value={card.value}
-            />
+        {/* Statistik: 2 kolom di HP, 5 kolom di desktop */}
+        <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+          {cards.map((card) => (
+            <StatCard key={card.title} {...card} />
           ))}
-        </div>
+        </section>
 
-        {/* Orders table */}
-        <div className="w-full overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          {isLoading ? (
-            <div className="flex flex-col items-center gap-2 py-10">
-              <span className="loading loading-spinner loading-md" />
-              <p>Loading orders...</p>
-            </div>
-          ) : isError ? (
-            <p className="py-10 text-center text-error">
-              Gagal memuat orders. Coba refresh halaman.
-            </p>
-          ) : (
-            <Table
-              title="Daftar Orders"
-              columns={tableColumns}
-              data={tableData}
-            />
-          )}
-        </div>
+        <RecentOrders
+          orders={recent.data}
+          isLoading={recent.isLoading}
+          isError={recent.isError}
+          onRetry={() => recent.refetch()}
+        />
       </div>
     </Layout>
   );

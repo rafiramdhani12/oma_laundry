@@ -45,6 +45,13 @@ export type OrderItem = {
   createdAt: string;
 };
 
+export type OrderStats = {
+  todayOrders: number;
+  todayRevenue: number;
+  statusCount: Record<OrderStatus, number>;
+};
+
+
 export type OrderListItem = {
   id: number;
   orderNumber: string;
@@ -55,7 +62,22 @@ export type OrderListItem = {
   paymentMethod: PaymentMethod | null;
   paidAt: string | null;
 };
+export type OrderRecentItem = {
+  serviceName: string;
+  unit: string;
+  quantity: number;
+};
  
+export type OrderRecent = {
+  id: number;
+  orderNumber: string;
+  customerName: string;
+  status: OrderStatus;
+  totalPrice: number;
+  createdAt: string;
+  items: OrderRecentItem[];
+};
+
 export type OrderDetail = {
   id: number;
   orderNumber: string;

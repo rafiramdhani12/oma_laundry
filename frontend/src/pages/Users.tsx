@@ -20,7 +20,12 @@ const initialForm: FormData = {
 };
 
 const Users = () => {
-  const { data: users = [], isLoading, isError } = useUsers();
+  const {
+    data: users = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useUsers();
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -52,6 +57,8 @@ const Users = () => {
   };
 
   const closeModal = () => {
+    if (isSaving) return;
+
     setModalOpen(false);
     setEditingUser(null);
     setForm(initialForm);
@@ -83,27 +90,39 @@ const Users = () => {
           ...(form.password ? { password: form.password } : {}),
         },
         {
-          onSuccess: closeModal,
+          onSuccess: () => {
+            setModalOpen(false);
+            setEditingUser(null);
+            setForm(initialForm);
+            setFormError("");
+          },
           onError: () => {
             setFormError("Gagal memperbarui karyawan. Coba lagi.");
           },
         }
       );
-    } else {
-      createUser.mutate(
-        {
-          name,
-          password: form.password,
-          role: "worker",
-        },
-        {
-          onSuccess: closeModal,
-          onError: () => {
-            setFormError("Gagal menambahkan karyawan. Coba lagi.");
-          },
-        }
-      );
+
+      return;
     }
+
+    createUser.mutate(
+      {
+        name,
+        password: form.password,
+        role: "worker",
+      },
+      {
+        onSuccess: () => {
+          setModalOpen(false);
+          setEditingUser(null);
+          setForm(initialForm);
+          setFormError("");
+        },
+        onError: () => {
+          setFormError("Gagal menambahkan karyawan. Coba lagi.");
+        },
+      }
+    );
   };
 
   const handleDelete = () => {
@@ -115,11 +134,23 @@ const Users = () => {
   };
 
   const tableColumns: ColumnType[] = [
-    { header: "ID", accessor: "id" },
-    { header: "Name", accessor: "name" },
-    { header: "Role", accessor: "role" },
+    { header: "Nama Karyawan", accessor: "name" },
     {
-      header: "Action",
+      header: "Role",
+      render: (row) => {
+        const user = users.find((item) => item.id === row.id);
+
+        if (!user) return null;
+
+        return (
+          <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600">
+            {user.role === "admin" ? "Admin" : "Worker"}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Aksi",
       render: (row) => {
         const user = users.find((item) => item.id === row.id);
 
@@ -140,7 +171,7 @@ const Users = () => {
               className="btn btn-error btn-sm text-white"
               onClick={() => setDeletingUser(user)}
             >
-              Delete
+              Hapus
             </button>
           </div>
         );
@@ -150,39 +181,88 @@ const Users = () => {
 
   return (
     <Layout>
-      <section className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="mx-auto max-w-6xl space-y-5">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">List Karyawan</h1>
-            <p className="text-sm text-gray-500">
-              Kelola akun karyawan Oma Laundry.
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold sm:text-3xl">
+                Karyawan
+              </h1>
+
+              {!isLoading && !isError && (
+                <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
+                  {users.length} karyawan
+                </span>
+              )}
+            </div>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Kelola akun dan akses karyawan Oma Laundry.
             </p>
           </div>
 
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
             onClick={openCreateModal}
           >
             + Tambah Karyawan
           </button>
         </div>
 
-        {isLoading && <p>Memuat data karyawan...</p>}
+        {/* Daftar karyawan */}
+        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+          {isLoading ? (
+            <ul className="divide-y divide-gray-100">
+              {[0, 1, 2, 3].map((item) => (
+                <li
+                  key={item}
+                  className="space-y-3 px-4 py-4 md:px-5"
+                >
+                  <div className="h-4 w-1/4 animate-pulse rounded bg-gray-200" />
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200" />
+                </li>
+              ))}
+            </ul>
+          ) : isError ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <p className="text-sm text-red-500">
+                Gagal memuat data karyawan.
+              </p>
 
-        {isError && (
-          <p className="text-error">
-            Gagal mengambil data karyawan. Periksa koneksi ke backend.
-          </p>
-        )}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => refetch()}
+              >
+                Coba lagi
+              </button>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <p className="text-sm text-gray-500">
+                Belum ada data karyawan.
+              </p>
 
-        {!isLoading && !isError && (
-          <Table
-            title="List Karyawan"
-            columns={tableColumns}
-            data={users}
-          />
-        )}
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={openCreateModal}
+              >
+                Tambah karyawan pertama
+              </button>
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <Table
+                title="Daftar Karyawan"
+                columns={tableColumns}
+                data={users}
+              />
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Modal tambah / edit */}
@@ -197,22 +277,33 @@ const Users = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="user-modal-title"
-            className="w-full max-w-md rounded-xl bg-base-100 p-6 shadow-xl"
+            className="w-full max-w-md rounded-2xl bg-base-100 p-6 shadow-xl"
           >
-            <h2 id="user-modal-title" className="text-xl font-bold">
+            <h2
+              id="user-modal-title"
+              className="text-xl font-bold"
+            >
               {editingUser ? "Edit Karyawan" : "Tambah Karyawan"}
             </h2>
 
+            <p className="mt-1 text-sm text-gray-500">
+              {editingUser
+                ? "Perbarui informasi akun karyawan."
+                : "Buat akun baru untuk karyawan Oma Laundry."}
+            </p>
+
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div className="form-control">
-                <label htmlFor="name" className="label">
+                <label htmlFor="user-name" className="label">
                   <span className="label-text">Nama karyawan</span>
                 </label>
+
                 <input
-                  id="name"
+                  id="user-name"
                   className="input input-bordered w-full"
                   type="text"
                   autoComplete="off"
+                  placeholder="Masukkan nama karyawan"
                   value={form.name}
                   onChange={(e) =>
                     setForm((prev) => ({
@@ -225,14 +316,14 @@ const Users = () => {
               </div>
 
               <div className="form-control">
-                <label htmlFor="password" className="label">
+                <label htmlFor="user-password" className="label">
                   <span className="label-text">
-                    Password
-                    {editingUser ? " (opsional)" : ""}
+                    Password{editingUser ? " (opsional)" : ""}
                   </span>
                 </label>
+
                 <input
-                  id="password"
+                  id="user-password"
                   className="input input-bordered w-full"
                   type="password"
                   autoComplete="new-password"
@@ -250,18 +341,29 @@ const Users = () => {
                   }
                   required={!editingUser}
                 />
+
+                {editingUser && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Password lama tidak ditampilkan demi keamanan.
+                  </p>
+                )}
               </div>
 
               <div className="form-control">
-                <label className="label">
+                <label htmlFor="user-role" className="label">
                   <span className="label-text">Role</span>
                 </label>
+
                 <input
+                  id="user-role"
                   className="input input-bordered w-full"
                   value="Worker"
                   readOnly
-                  aria-label="Role karyawan"
                 />
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Akun yang dibuat dari halaman ini menggunakan role Worker.
+                </p>
               </div>
 
               {formError && (
@@ -285,11 +387,16 @@ const Users = () => {
                   className="btn btn-primary"
                   disabled={isSaving}
                 >
-                  {isSaving
-                    ? "Menyimpan..."
-                    : editingUser
-                      ? "Simpan Perubahan"
-                      : "Tambah Karyawan"}
+                  {isSaving ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm" />
+                      Menyimpan...
+                    </>
+                  ) : editingUser ? (
+                    "Simpan Perubahan"
+                  ) : (
+                    "Tambah Karyawan"
+                  )}
                 </button>
               </div>
             </form>
@@ -299,25 +406,35 @@ const Users = () => {
 
       {/* Modal konfirmasi hapus */}
       {deletingUser && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !deleteUser.isPending) {
+              setDeletingUser(null);
+            }
+          }}
+        >
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="delete-modal-title"
-            className="w-full max-w-sm rounded-xl bg-base-100 p-6 shadow-xl"
+            aria-labelledby="delete-user-title"
+            className="w-full max-w-sm rounded-2xl bg-base-100 p-6 shadow-xl"
           >
-            <h2 id="delete-modal-title" className="text-lg font-bold">
+            <h2
+              id="delete-user-title"
+              className="text-lg font-bold"
+            >
               Hapus Karyawan?
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
               Akun <strong>{deletingUser.name}</strong> akan dihapus.
-              Tindakan ini tidak bisa dibatalkan.
+              Pastikan akun ini memang sudah tidak digunakan.
             </p>
 
             {deleteUser.isError && (
               <p role="alert" className="mt-3 text-sm text-error">
-                Gagal menghapus karyawan. Coba lagi.
+                Gagal menghapus karyawan. Periksa koneksi atau relasi data.
               </p>
             )}
 
@@ -337,7 +454,14 @@ const Users = () => {
                 onClick={handleDelete}
                 disabled={deleteUser.isPending}
               >
-                {deleteUser.isPending ? "Menghapus..." : "Ya, Hapus"}
+                {deleteUser.isPending ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm" />
+                    Menghapus...
+                  </>
+                ) : (
+                  "Ya, Hapus"
+                )}
               </button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 import { useState, type FormEvent } from "react";
 import Layout from "../components/Layout";
 import Table, { type ColumnType } from "../components/Table";
@@ -34,6 +35,7 @@ const Services = () => {
     isLoading,
     isError,
     error,
+    refetch,
   } = useServices();
 
   const createService = useCreateService();
@@ -71,14 +73,16 @@ const Services = () => {
   };
 
   const closeModal = () => {
+    if (isSaving) return;
+
     setModalOpen(false);
     setEditingService(null);
     setForm(initialForm);
     setFormError("");
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setFormError("");
 
     const name = form.name.trim();
@@ -109,16 +113,17 @@ const Services = () => {
           onError: () => {
             setFormError("Gagal memperbarui layanan. Coba lagi.");
           },
-        }
-      );
-    } else {
-      createService.mutate(payload, {
-        onSuccess: closeModal,
-        onError: () => {
-          setFormError("Gagal menambahkan layanan. Coba lagi.");
         },
-      });
+      );
+      return;
     }
+
+    createService.mutate(payload, {
+      onSuccess: closeModal,
+      onError: () => {
+        setFormError("Gagal menambahkan layanan. Coba lagi.");
+      },
+    });
   };
 
   const handleDelete = () => {
@@ -130,9 +135,14 @@ const Services = () => {
   };
 
   const tableColumns: ColumnType[] = [
-    { header: "ID", accessor: "id" },
-    { header: "Nama Layanan", accessor: "name" },
-    { header: "Satuan", accessor: "unit" },
+    {
+      header: "Nama Layanan",
+      accessor: "name",
+    },
+    {
+      header: "Satuan",
+      accessor: "unit",
+    },
     {
       header: "Harga",
       accessor: "price",
@@ -142,7 +152,7 @@ const Services = () => {
       header: "Aksi",
       render: (row) => {
         const service = services.find(
-          (item) => item.id === row.id
+          (item) => item.id === row.id,
         );
 
         if (!service) return null;
@@ -172,150 +182,233 @@ const Services = () => {
 
   return (
     <Layout>
-      <section className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="mx-auto max-w-6xl space-y-5">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">
-              Layanan Laundry
-            </h1>
-            <p className="text-sm text-gray-500">
-              Kelola jenis layanan dan harga laundry.
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold sm:text-3xl">
+                Services
+              </h1>
+
+              {!isLoading && !isError && (
+                <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
+                  {services.length} layanan
+                </span>
+              )}
+            </div>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Kelola jenis layanan dan harga Oma Laundry.
             </p>
           </div>
 
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
             onClick={openCreateModal}
           >
             + Tambah Layanan
           </button>
         </div>
 
-        {isLoading && (
-          <p className="py-6 text-center">
-            Memuat data layanan...
-          </p>
-        )}
+        {/* Daftar layanan */}
+        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+          {isLoading ? (
+            <ul className="divide-y divide-gray-100">
+              {[0, 1, 2, 3].map((item) => (
+                <li
+                  key={item}
+                  className="space-y-3 px-4 py-4 md:px-5"
+                >
+                  <div className="h-4 w-1/4 animate-pulse rounded bg-gray-200" />
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200" />
+                </li>
+              ))}
+            </ul>
+          ) : isError ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <p className="text-sm text-red-500">
+                Gagal memuat data layanan.
+                {error instanceof Error ? ` ${error.message}` : ""}
+              </p>
 
-        {isError && (
-          <div className="alert alert-error">
-            <span>
-              Gagal mengambil data layanan.{" "}
-              {error instanceof Error ? error.message : ""}
-            </span>
-          </div>
-        )}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => refetch()}
+              >
+                Coba lagi
+              </button>
+            </div>
+          ) : services.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-gray-100">
+                <span className="text-xl">🧺</span>
+              </div>
 
-        {!isLoading && !isError && (
-          <div className="w-full overflow-x-auto rounded-lg border border-base-300 bg-base-100">
-            <Table
-              title="Daftar Layanan"
-              columns={tableColumns}
-              data={services}
-            />
-          </div>
-        )}
+              <div>
+                <p className="font-semibold text-gray-900">
+                  Belum ada layanan
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Tambahkan layanan pertama Oma Laundry.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={openCreateModal}
+              >
+                Tambah Layanan
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto p-1">
+              <Table
+                title="Daftar Layanan"
+                columns={tableColumns}
+                data={services}
+              />
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Modal tambah / edit */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeModal();
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeModal();
+            }
           }}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="service-modal-title"
-            className="w-full max-w-md rounded-xl bg-base-100 p-6 shadow-xl"
+            className="w-full max-w-md rounded-2xl bg-base-100 p-6 shadow-xl"
           >
-            <h2
-              id="service-modal-title"
-              className="text-xl font-bold"
-            >
-              {editingService
-                ? "Edit Layanan"
-                : "Tambah Layanan"}
-            </h2>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2
+                  id="service-modal-title"
+                  className="text-xl font-bold"
+                >
+                  {editingService
+                    ? "Edit Layanan"
+                    : "Tambah Layanan"}
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {editingService
+                    ? "Perbarui informasi dan harga layanan."
+                    : "Masukkan jenis layanan laundry yang tersedia."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm btn-square"
+                onClick={closeModal}
+                disabled={isSaving}
+                aria-label="Tutup modal"
+              >
+                ✕
+              </button>
+            </div>
 
             <form
               onSubmit={handleSubmit}
-              className="mt-5 space-y-4"
+              className="mt-6 space-y-4"
             >
               <div className="form-control">
                 <label htmlFor="service-name" className="label">
-                  <span className="label-text">
+                  <span className="label-text font-medium">
                     Nama layanan
                   </span>
                 </label>
+
                 <input
                   id="service-name"
+                  type="text"
                   className="input input-bordered w-full"
                   placeholder="Contoh: Cuci Kering"
                   value={form.name}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      name: e.target.value,
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      name: event.target.value,
                     }))
                   }
+                  disabled={isSaving}
                   required
                 />
               </div>
 
               <div className="form-control">
                 <label htmlFor="service-unit" className="label">
-                  <span className="label-text">Satuan</span>
+                  <span className="label-text font-medium">
+                    Satuan
+                  </span>
                 </label>
+
                 <input
                   id="service-unit"
+                  type="text"
                   className="input input-bordered w-full"
-                  placeholder="Contoh: kg, pcs"
+                  placeholder="Contoh: kg atau pcs"
                   value={form.unit}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      unit: e.target.value,
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      unit: event.target.value,
                     }))
                   }
+                  disabled={isSaving}
                   required
                 />
               </div>
 
               <div className="form-control">
                 <label htmlFor="service-price" className="label">
-                  <span className="label-text">
+                  <span className="label-text font-medium">
                     Harga per satuan (Rp)
                   </span>
                 </label>
+
                 <input
                   id="service-price"
-                  className="input input-bordered w-full"
                   type="number"
                   min="0"
                   step="1"
+                  className="input input-bordered w-full"
                   placeholder="Contoh: 10000"
                   value={form.price}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      price: e.target.value,
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      price: event.target.value,
                     }))
                   }
+                  disabled={isSaving}
                   required
                 />
               </div>
 
               {formError && (
-                <p role="alert" className="text-sm text-error">
+                <div
+                  role="alert"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600"
+                >
                   {formError}
-                </p>
+                </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 border-t border-base-200 pt-4">
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -330,6 +423,10 @@ const Services = () => {
                   className="btn btn-primary"
                   disabled={isSaving}
                 >
+                  {isSaving && (
+                    <span className="loading loading-spinner loading-sm" />
+                  )}
+
                   {isSaving
                     ? "Menyimpan..."
                     : editingService
@@ -344,12 +441,21 @@ const Services = () => {
 
       {/* Modal konfirmasi hapus */}
       {deletingService && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              if (!deleteService.isPending) {
+                setDeletingService(null);
+              }
+            }
+          }}
+        >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-service-title"
-            className="w-full max-w-sm rounded-xl bg-base-100 p-6 shadow-xl"
+            className="w-full max-w-sm rounded-2xl bg-base-100 p-6 shadow-xl"
           >
             <h2
               id="delete-service-title"
@@ -358,10 +464,13 @@ const Services = () => {
               Hapus Layanan?
             </h2>
 
-            <p className="mt-2 text-sm text-gray-500">
-              Layanan <strong>{deletingService.name}</strong>{" "}
-              akan dihapus. Pastikan layanan ini tidak sedang
-              digunakan oleh transaksi.
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
+              Layanan{" "}
+              <strong className="text-base-content">
+                {deletingService.name}
+              </strong>{" "}
+              akan dihapus. Pastikan layanan ini tidak masih
+              digunakan oleh order.
             </p>
 
             {deleteService.isError && (
@@ -387,6 +496,10 @@ const Services = () => {
                 onClick={handleDelete}
                 disabled={deleteService.isPending}
               >
+                {deleteService.isPending && (
+                  <span className="loading loading-spinner loading-sm" />
+                )}
+
                 {deleteService.isPending
                   ? "Menghapus..."
                   : "Ya, Hapus"}

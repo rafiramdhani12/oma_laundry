@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "../../components/Layout";
 import {
@@ -12,15 +12,12 @@ import {
 } from "../../hooks/usePayment";
 import PrintReceiptButton from "../../components/PrintReceiptButton";
 import OrderReceipt from "../../components/OrderReceipt";
-
-type OrderStatus = "diterima" | "diproses" | "siap" | "diambil";
-
-const statuses: { value: OrderStatus; label: string }[] = [
-  { value: "diterima", label: "Diterima" },
-  { value: "diproses", label: "Diproses" },
-  { value: "siap", label: "Siap diambil" },
-  { value: "diambil", label: "Sudah diambil" },
-];
+import {
+  STATUS_ACTION,
+  STATUS_FLOW,
+  STATUS_LABEL,
+  getNextStatus,
+} from "../../utils/status";
 
 const formatRupiah = (value: number) =>
   `Rp${value.toLocaleString("id-ID")}`;
@@ -45,18 +42,15 @@ const DetailPage = () => {
   const updateStatus = useUpdateOrderStatus();
   const createPayment = useCreatePayment();
 
-  const [status, setStatus] = useState<OrderStatus>("diterima");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("cash");
   const [message, setMessage] = useState("");
   const [paymentMessage, setPaymentMessage] = useState("");
 
-  useEffect(() => {
-    if (order?.status) {
-      setStatus(order.status as OrderStatus);
-    }
-  }, [order?.status]);
+  // Status diturunkan langsung dari data order, tidak perlu state sendiri.
+  const currentIndex = order ? STATUS_FLOW.indexOf(order.status) : -1;
+  const nextStatus = order ? getNextStatus(order.status) : null;
 
   const totalPrice = Number(order?.totalPrice ?? 0);
 
@@ -74,18 +68,25 @@ const DetailPage = () => {
         ? "Dibayar sebagian"
         : "Belum dibayar";
 
-  const handleUpdateStatus = async () => {
+  const handleAdvanceStatus = async () => {
     if (!validOrderId) {
       setMessage("ID order tidak valid.");
       return;
     }
+
+    if (!nextStatus) return;
+
+    const confirmed = window.confirm(
+      `Ubah status menjadi "${STATUS_LABEL[nextStatus]}"? Status tidak bisa dikembalikan.`,
+    );
+    if (!confirmed) return;
 
     try {
       setMessage("");
 
       await updateStatus.mutateAsync({
         id: orderId,
-        status,
+        status: nextStatus,
       });
 
       setMessage("Status order berhasil diperbarui.");
@@ -228,31 +229,21 @@ const DetailPage = () => {
               </div>
             </div>
 
-           
-            {/* STATUS LAUNDRY */}
+            {/* STATUS LAUNDRY: sekali jalan, maju satu langkah */}
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body">
-                <h2 className="card-title">Update Status</h2>
+                <h2 className="card-title">Status Laundry</h2>
 
-                <label htmlFor="order-status" className="label">
-                  Status Laundry
-                </label>
-
-                <select
-                  id="order-status"
-                  className="select select-bordered w-full"
-                  value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value as OrderStatus)
-                  }
-                  disabled={updateStatus.isPending}
-                >
-                  {statuses.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
+                <ul className="steps steps-vertical w-full lg:steps-horizontal">
+                  {STATUS_FLOW.map((step, index) => (
+                    <li
+                      key={step}
+                      className={`step ${index <= currentIndex ? "step-primary" : ""}`}
+                    >
+                      {STATUS_LABEL[step]}
+                    </li>
                   ))}
-                </select>
+                </ul>
 
                 {message && (
                   <p
@@ -268,21 +259,25 @@ const DetailPage = () => {
                   </p>
                 )}
 
-                <div className="card-actions justify-end">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={handleUpdateStatus}
-                    disabled={
-                      updateStatus.isPending || status === order.status
-                    }
-                  >
-                    {updateStatus.isPending && (
-                      <span className="loading loading-spinner loading-sm" />
-                    )}
-                    Simpan Status
-                  </button>
-                </div>
+                {nextStatus ? (
+                  <div className="card-actions justify-end">
+                    <button
+                      type="button"
+                      className="btn btn-primary w-full sm:w-auto"
+                      onClick={handleAdvanceStatus}
+                      disabled={updateStatus.isPending}
+                    >
+                      {updateStatus.isPending && (
+                        <span className="loading loading-spinner loading-sm" />
+                      )}
+                      {STATUS_ACTION[nextStatus]}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="alert alert-success">
+                    Order sudah diambil. Status tidak bisa diubah lagi.
+                  </div>
+                )}
               </div>
             </div>
 

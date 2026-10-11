@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/axios";
 import { queryKeys } from "../lib/QueryKeys";
-import type { OrderDetail, OrderListItem, OrderStatus } from "../interface";
+import type { OrderDetail, OrderListItem, OrderRecent, OrderStats, OrderStatus } from "../interface";
 
 type CreateOrderPayload = {
   customerId: number;
@@ -21,8 +21,16 @@ export const useOrdersToday = () =>
   useQuery({
     queryKey: queryKeys.orders.today,
     queryFn: async () =>
-      (await api.get<OrderListItem[]>("/orders/today")).data,
+      (await api.get<OrderRecent[]>("/orders/today")).data,
   });
+
+export const useOrderStats = () =>
+  useQuery({
+    queryKey: queryKeys.orders.stats,
+    queryFn: async () => (await api.get<OrderStats>("/orders/stats")).data,
+  });
+ 
+
 
 // GET /orders/detail/:id (object, bukan array)
 export const useOrderDetail = (id: number) =>
