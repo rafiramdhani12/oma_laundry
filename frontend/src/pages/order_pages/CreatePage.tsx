@@ -464,6 +464,18 @@ const CreatePage = () => {
                 </div>
               );
             })}
+
+            {/* date */}
+            <div className="grid grid-col gap-5 container md:flex justify-center md:gap-50">
+              <div>
+                <label htmlFor="">date start</label>
+              <input type="date" className="input" />
+              </div>
+              <div>
+                <label htmlFor="">date end</label>
+              <input type="date" className="input" />
+              </div>
+            </div>
           </section>
 
           {/* TOTAL */}

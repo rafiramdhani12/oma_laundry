@@ -5,4 +5,5 @@ export const services = pgTable('services' , {
     name : varchar({length:25}).notNull(),
     unit : varchar({length : 25}).notNull(),
     price : integer().notNull(),
+    durationHours: integer().notNull().default(56)
 })

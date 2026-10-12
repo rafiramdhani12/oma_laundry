@@ -4,7 +4,8 @@ import {
     integer,
     pgEnum,
     timestamp,
-    varchar
+    varchar,
+    PgTimestamp
 } from "drizzle-orm/pg-core";
 
 import { customers } from "./customers.ts";
@@ -34,6 +35,9 @@ export const orders = pgTable("orders", {
     totalPrice: integer()
         .notNull()
         .default(0),
+    
+    estimateDoneAt:timestamp()
+    .notNull(),
 
     createdAt: timestamp()
         .notNull()
