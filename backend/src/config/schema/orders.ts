@@ -36,14 +36,13 @@ export const orders = pgTable("orders", {
         .notNull()
         .default(0),
     
-    estimateDoneAt:timestamp()
-    .notNull(),
+    estimateDoneAt:timestamp({withTimezone: true}).notNull(),
 
-    createdAt: timestamp()
+    createdAt: timestamp({withTimezone: true})
         .notNull()
         .defaultNow(),
 
-    updatedAt: timestamp()
+    updatedAt: timestamp({withTimezone: true})
         .notNull()
         .defaultNow(),
 });

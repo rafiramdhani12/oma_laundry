@@ -11,6 +11,8 @@ import { useServices } from "../../hooks/useServices";
 
 import type { Customer, Service } from "../../interface";
 
+import { formatDateTime } from "../../utils/format";
+
 type CustomerMode = "existing" | "new";
 
 type OrderItemForm = {
@@ -54,6 +56,7 @@ const CreatePage = () => {
   ]);
 
   const [formError, setFormError] = useState("");
+  const [estimateDays , setEstimateDays] = useState("1");
 
   const isSubmitting =
     createOrder.isPending || createCustomer.isPending;
@@ -87,6 +90,17 @@ const CreatePage = () => {
       return total + Number(service.price) * quantity;
     }, 0);
   }, [items, services]);
+
+  const estimatedDoneAt = useMemo(() => {
+  const days = Number(estimateDays);
+
+  if (!Number.isInteger(days) || days < 1 || days > 7) {
+    return null;
+  }
+
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}, [estimateDays]);
+
 
   const updateItem = (
     index: number,
@@ -162,6 +176,7 @@ const CreatePage = () => {
 
       await createOrder.mutateAsync({
         customerId,
+        estimateDays: Number(estimateDays),
         items: items.map((item) => ({
           serviceId: Number(item.serviceId),
           quantity: Number(item.quantity),
@@ -466,16 +481,31 @@ const CreatePage = () => {
             })}
 
             {/* date */}
-            <div className="grid grid-col gap-5 container md:flex justify-center md:gap-50">
-              <div>
-                <label htmlFor="">date start</label>
-              <input type="date" className="input" />
-              </div>
-              <div>
-                <label htmlFor="">date end</label>
-              <input type="date" className="input" />
-              </div>
-            </div>
+           <div className="space-y-2">
+            <label className="label">
+              <span className="label-text">Target selesai</span>
+            </label>
+
+            <select
+              className="select select-bordered w-full"
+              value={estimateDays}
+              onChange={(event) => setEstimateDays(event.target.value)}
+            >
+              <option value="1">1 hari</option>
+              <option value="2">2 hari</option>
+              <option value="3">3 hari</option>
+              <option value="5">5 hari</option>
+              <option value="7">7 hari</option>
+            </select>
+
+            <p className="text-sm text-base-content/60">
+              Estimasi selesai:{" "}
+              {estimatedDoneAt
+                ? formatDateTime(estimatedDoneAt)
+                : "-"}
+            </p>
+          </div>
+
           </section>
 
           {/* TOTAL */}

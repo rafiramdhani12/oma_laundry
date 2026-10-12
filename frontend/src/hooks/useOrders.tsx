@@ -5,9 +5,12 @@ import type { OrderDetail, OrderListItem, OrderRecent, OrderStats, OrderStatus }
 
 type CreateOrderPayload = {
   customerId: number;
-  items: { serviceId: number; quantity: number }[];
+  estimateDoneAt: number;
+  items: {
+    serviceId: number;
+    quantity: number;
+  }[];
 };
-
 // GET /orders/summary
 export const useOrders = () =>
   useQuery({
@@ -39,6 +42,7 @@ export const useOrderDetail = (id: number) =>
     queryFn: async () =>
       (await api.get<OrderDetail>(`/orders/detail/${id}`)).data,
     enabled: !!id,
+    refetchInterval: 10_000,
   });
 
   // GET recent orders untuk dashboard

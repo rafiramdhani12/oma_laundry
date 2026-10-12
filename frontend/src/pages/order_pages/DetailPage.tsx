@@ -69,31 +69,29 @@ const DetailPage = () => {
         : "Belum dibayar";
 
   const handleAdvanceStatus = async () => {
-    if (!validOrderId) {
-      setMessage("ID order tidak valid.");
-      return;
-    }
+  if (!validOrderId || !nextStatus) return;
 
-    if (!nextStatus) return;
+  const confirmed = window.confirm(
+    nextStatus === "diambil"
+      ? "Konfirmasi bahwa cucian sudah diambil customer?"
+      : `Ubah status order menjadi "${STATUS_LABEL[nextStatus]}"?`,
+  );
 
-    const confirmed = window.confirm(
-      `Ubah status menjadi "${STATUS_LABEL[nextStatus]}"? Status tidak bisa dikembalikan.`,
-    );
-    if (!confirmed) return;
+  if (!confirmed) return;
 
-    try {
-      setMessage("");
+  try {
+    setMessage("");
 
-      await updateStatus.mutateAsync({
-        id: orderId,
-        status: nextStatus,
-      });
+    await updateStatus.mutateAsync({
+      id: orderId,
+      status: nextStatus,
+    });
 
-      setMessage("Status order berhasil diperbarui.");
-    } catch {
-      setMessage("Gagal memperbarui status order.");
-    }
-  };
+    setMessage("Status order berhasil diperbarui.");
+  } catch {
+    setMessage("Gagal memperbarui status order. Coba muat ulang halaman.");
+  }
+};
 
   const handleCreatePayment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -183,7 +181,11 @@ const DetailPage = () => {
 
                   <div>
                     <p className="text-sm opacity-60">Tanggal Order</p>
-                    <p>{new Date(order.createdAt).toLocaleString("id-ID")}</p>
+                    <p>{new Date(order.createdAt).toLocaleString("id-ID" , {
+                      timeZone: "Asia/Jakarta",
+                      dateStyle: "short",
+                      timeStyle: "medium",
+                    })}</p>
                   </div>
                 </div>
               </div>
@@ -278,6 +280,14 @@ const DetailPage = () => {
                     Order sudah diambil. Status tidak bisa diubah lagi.
                   </div>
                 )}
+              </div>
+              <div className="card-body">
+                <p className="text-sm opacity-60">Estimasi Selesai</p>
+                <p>
+                  {order.estimateDoneAt
+                    ? new Date(order.estimateDoneAt).toLocaleString("id-ID")
+                    : "Belum ditentukan"}
+                </p>
               </div>
             </div>
 

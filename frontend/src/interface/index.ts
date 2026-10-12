@@ -31,6 +31,7 @@ export type Order = {
   customerId: number;
   status: OrderStatus;
   totalPrice: number;
+  estimateDays: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -83,6 +84,7 @@ export type OrderDetail = {
   orderNumber: string;
   status: OrderStatus;
   totalPrice: number;
+  estimateDoneAt: string | null;
   createdAt: string;
   updatedAt: string;
   customer: { id: number; name: string; phone: string };

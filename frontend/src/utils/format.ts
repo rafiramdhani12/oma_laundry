@@ -12,3 +12,9 @@ export const formatDate = (date: Date | string) =>
     month: "short",
     year: "numeric",
   });
+
+  export const formatDateTime = (date: Date | string) =>
+  new Date(date).toLocaleString("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });

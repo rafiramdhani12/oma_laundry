@@ -4,7 +4,7 @@ import { orderItems } from "../config/schema/orderItems.ts";
 import { services } from "../config/schema/services.ts";
 import { customers } from "../config/schema/customers.ts";
 import { payments } from "../config/schema/payment.ts";
-import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, sql, lte} from "drizzle-orm";
 
 // Kolom yang dipakai buat tabel list (order + nama customer + info bayar)
 const orderSummaryColumns = {
@@ -71,6 +71,7 @@ export const readOrderDetail = async (id: number) => {
             orderNumber: orders.orderNumber,
             status: orders.status,
             totalPrice: orders.totalPrice,
+            estimateDoneAt: orders.estimateDoneAt,
             createdAt: orders.createdAt,
             updatedAt: orders.updatedAt,
             customer: {
@@ -194,62 +195,76 @@ export const readOrderStats = async () => {
 
 
 export const createOrder = async (
-    customerId: number,
-    items: {
-        serviceId: number;
-        quantity: number;
-    }[]
+  customerId: number,
+  estimateDays: number,
+  items: {
+    serviceId: number;
+    quantity: number;
+  }[],
 ) => {
+  if (
+    !Number.isInteger(estimateDays) ||
+    estimateDays < 1 ||
+    estimateDays > 7
+  ) {
+    throw new Error("Estimasi harus antara 1 sampai 7 hari");
+  }
 
-    let totalPrice = 0;
+  if (items.length === 0) {
+    throw new Error("Order harus memiliki minimal satu layanan");
+  }
 
-    const orderItemsData = [];
+  let totalPrice = 0;
+  const orderItemsData = [];
 
-    for (const item of items) {
+  for (const item of items) {
+    const [service] = await db
+      .select()
+      .from(services)
+      .where(eq(services.id, item.serviceId));
 
-        const service = await db
-            .select()
-            .from(services)
-            .where(eq(services.id, item.serviceId));
-
-        if (service.length === 0) {
-            throw new Error(`Service ${item.serviceId} not found`);
-        }
-
-        const unitPrice = service[0].price;
-        const itemTotal = unitPrice * item.quantity;
-
-        totalPrice += itemTotal;
-
-        orderItemsData.push({
-            serviceId: item.serviceId,
-            quantity: item.quantity,
-            unitPrice,
-            totalPrice: itemTotal
-        });
+    if (!service) {
+      throw new Error(`Service ${item.serviceId} not found`);
     }
 
-    const orderNumber = `ORD-${Date.now()}`;
+    const unitPrice = service.price;
+    const itemTotal = unitPrice * item.quantity;
 
-    const [order] = await db
-        .insert(orders)
-        .values({
-            orderNumber,
-            customerId,
-            totalPrice
-        })
-        .returning();
+    totalPrice += itemTotal;
 
-    await db
-        .insert(orderItems)
-        .values(
-            orderItemsData.map((item) => ({
-                orderId: order.id,
-                ...item
-            }))
-        );
+    orderItemsData.push({
+      serviceId: item.serviceId,
+      quantity: item.quantity,
+      unitPrice,
+      totalPrice: itemTotal,
+    });
+  }
 
-    return order;
+  const orderNumber = `ORD-${Date.now()}`;
+
+  const estimateDoneAt = new Date(
+    Date.now() + estimateDays * 24 * 60 * 60 * 1000,
+  );
+
+  const [order] = await db
+    .insert(orders)
+    .values({
+      orderNumber,
+      customerId,
+      totalPrice,
+      status: "diterima",
+      estimateDoneAt,
+    })
+    .returning();
+
+  await db.insert(orderItems).values(
+    orderItemsData.map((item) => ({
+      orderId: order.id,
+      ...item,
+    })),
+  );
+
+  return order;
 };
 
 const STATUS_FLOW = ["diterima", "diproses", "siap", "diambil"] as const;
@@ -288,6 +303,24 @@ export const updateOrderStatus = async (id: number, status: OrderStatus) => {
     }
  
     return updated;
+};
+
+export const markExpiredOrdersAsReady = async () => {
+  const now = new Date();
+
+  return db
+    .update(orders)
+    .set({
+      status: "siap",
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(orders.status, "diproses"),
+        lte(orders.estimateDoneAt, now)
+      )
+    )
+    .returning({ id: orders.id });
 };
 
 
