@@ -1,33 +1,24 @@
-
 import type { OrderDetail } from "../interface";
-import type { Payment } from "../hooks/usePayment";
 import "../styles/receipt.css";
 
+// Nota membaca langsung dari order.payment (1 order = 1 pembayaran),
+// jadi tidak perlu prop `payments` lagi.
 type OrderReceiptProps = {
   order: OrderDetail;
-  payments: Payment[];
 };
 
-const formatRupiah = (value: number) =>
-  `Rp${value.toLocaleString("id-ID")}`;
+const formatRupiah = (value: number) => `Rp${value.toLocaleString("id-ID")}`;
 
-const OrderReceipt = ({ order, payments }: OrderReceiptProps) => {
-  const paidAmount = payments.reduce(
-    (total, payment) => total + Number(payment.amount),
-    0,
-  );
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
 
-  const remainingAmount = Math.max(
-    0,
-    Number(order.totalPrice) - paidAmount,
-  );
-
-  const paymentStatus =
-    remainingAmount === 0
-      ? "LUNAS"
-      : paidAmount > 0
-        ? "DIBAYAR SEBAGIAN"
-        : "BELUM DIBAYAR";
+const OrderReceipt = ({ order }: OrderReceiptProps) => {
+  // Hanya dianggap lunas kalau status di database "paid"
+  const payment = order.payment?.status === "paid" ? order.payment : null;
 
   return (
     <article className="receipt-print-area">
@@ -46,8 +37,13 @@ const OrderReceipt = ({ order, payments }: OrderReceiptProps) => {
 
         <div>
           <span>Tanggal Order</span>
+          <strong>{formatDateTime(order.createdAt)}</strong>
+        </div>
+
+        <div>
+          <span>Estimasi Selesai</span>
           <strong>
-            {new Date(order.createdAt).toLocaleString("id-ID")}
+            {order.estimateDoneAt ? formatDateTime(order.estimateDoneAt) : "-"}
           </strong>
         </div>
 
@@ -74,7 +70,7 @@ const OrderReceipt = ({ order, payments }: OrderReceiptProps) => {
         </thead>
 
         <tbody>
-          {order.items.map((item : any) => (
+          {order.items.map((item) => (
             <tr key={item.id}>
               <td>{item.serviceName}</td>
               <td>
@@ -95,52 +91,38 @@ const OrderReceipt = ({ order, payments }: OrderReceiptProps) => {
         </div>
 
         <div>
-          <span>Total Dibayar</span>
-          <strong>{formatRupiah(paidAmount)}</strong>
-        </div>
-
-        <div>
-          <span>Sisa Tagihan</span>
-          <strong>{formatRupiah(remainingAmount)}</strong>
-        </div>
-
-        <div>
           <span>Status Pembayaran</span>
-          <strong>{paymentStatus}</strong>
+          <strong>{payment ? "LUNAS" : "BELUM DIBAYAR"}</strong>
         </div>
+
+        {payment && (
+          <>
+            <div>
+              <span>Metode</span>
+              <strong>
+                {payment.paymentMethod === "cash" ? "Cash" : "Transfer"}
+              </strong>
+            </div>
+
+            <div>
+              <span>Bayar</span>
+              <strong>{formatRupiah(payment.amount)}</strong>
+            </div>
+
+            <div>
+              <span>Kembalian</span>
+              <strong>{formatRupiah(payment.change)}</strong>
+            </div>
+
+            {payment.paidAt && (
+              <div>
+                <span>Waktu Bayar</span>
+                <strong>{formatDateTime(payment.paidAt)}</strong>
+              </div>
+            )}
+          </>
+        )}
       </section>
-
-      <hr />
-
-      <h2>Riwayat Pembayaran</h2>
-
-      {payments.length === 0 ? (
-        <p>Belum ada pembayaran.</p>
-      ) : (
-        <table className="receipt-table">
-          <thead>
-            <tr>
-              <th>Waktu</th>
-              <th>Metode</th>
-              <th>Nominal</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {payments.map((payment) => (
-              <tr key={payment.id}>
-                <td>
-                  {new Date(payment.paidAt).toLocaleString("id-ID")}
-                </td>
-                <td>
-                  {payment.paymentMethod === "cash" ? "Cash" : "Transfer"}
-                </td>
-                <td>{formatRupiah(Number(payment.amount))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
 
       <footer className="receipt-footer">
         <p>Terima kasih telah menggunakan layanan Oma Laundry.</p>

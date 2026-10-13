@@ -14,6 +14,7 @@ const orderSummaryColumns = {
     totalPrice: orders.totalPrice,
     createdAt: orders.createdAt,
     customerName: customers.name,
+    paymentStatus: payments.status,
     paymentMethod: payments.paymentMethod, // null = belum dibayar
     paidAt: payments.paidAt,
 };
@@ -83,9 +84,9 @@ export const readOrderDetail = async (id: number) => {
         .from(orders)
         .innerJoin(customers, eq(orders.customerId, customers.id))
         .where(eq(orders.id, id));
-
+ 
     if (!order) return null;
-
+ 
     const [items, [payment]] = await Promise.all([
         db
             .select({
@@ -104,15 +105,30 @@ export const readOrderDetail = async (id: number) => {
             .select({
                 id: payments.id,
                 amount: payments.amount,
+                status: payments.status,
                 paymentMethod: payments.paymentMethod,
                 paidAt: payments.paidAt,
             })
             .from(payments)
             .where(eq(payments.orderId, id)),
     ]);
-
-    return { ...order, items, payment: payment ?? null };
+ 
+    return {
+        ...order,
+        items,
+        payment: payment
+            ? {
+                  ...payment,
+                  // kembalian dihitung di backend; 0 kalau belum dibayar
+                  change:
+                      payment.status === "paid"
+                          ? Math.max(0, payment.amount - order.totalPrice)
+                          : 0,
+              }
+            : null,
+    };
 };
+
 
 // fungsi agregat
 
@@ -195,77 +211,96 @@ export const readOrderStats = async () => {
 
 
 export const createOrder = async (
-  customerId: number,
-  estimateDays: number,
-  items: {
-    serviceId: number;
-    quantity: number;
-  }[],
+    customerId: number,
+    estimateDays: number, // "Target selesai" dari form (dalam hari)
+    items: {
+        serviceId: number;
+        quantity: number;
+    }[]
 ) => {
-  if (
-    !Number.isInteger(estimateDays) ||
-    estimateDays < 1 ||
-    estimateDays > 7
-  ) {
-    throw new Error("Estimasi harus antara 1 sampai 7 hari");
-  }
-
-  if (items.length === 0) {
-    throw new Error("Order harus memiliki minimal satu layanan");
-  }
-
-  let totalPrice = 0;
-  const orderItemsData = [];
-
-  for (const item of items) {
-    const [service] = await db
-      .select()
-      .from(services)
-      .where(eq(services.id, item.serviceId));
-
-    if (!service) {
-      throw new Error(`Service ${item.serviceId} not found`);
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error("Order harus punya minimal satu item");
     }
-
-    const unitPrice = service.price;
-    const itemTotal = unitPrice * item.quantity;
-
-    totalPrice += itemTotal;
-
-    orderItemsData.push({
-      serviceId: item.serviceId,
-      quantity: item.quantity,
-      unitPrice,
-      totalPrice: itemTotal,
+ 
+    if (!Number.isInteger(estimateDays) || estimateDays <= 0) {
+        throw new Error("Target selesai tidak valid");
+    }
+ 
+    let totalPrice = 0;
+ 
+    const orderItemsData: {
+        serviceId: number;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+    }[] = [];
+ 
+    for (const item of items) {
+        if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+            throw new Error("Jumlah item tidak valid");
+        }
+ 
+        const [service] = await db
+            .select()
+            .from(services)
+            .where(eq(services.id, item.serviceId));
+ 
+        if (!service) {
+            throw new Error(`Service ${item.serviceId} not found`);
+        }
+ 
+        // Math.round: quantity boleh desimal (2.5 kg), tapi kolom totalPrice bertipe integer
+        const itemTotal = Math.round(service.price * item.quantity);
+        totalPrice += itemTotal;
+ 
+        orderItemsData.push({
+            serviceId: item.serviceId,
+            quantity: item.quantity,
+            unitPrice: service.price,
+            totalPrice: itemTotal
+        });
+    }
+ 
+    const orderNumber = `ORD-${Date.now()}`;
+ 
+    // Target selesai (hari) -> tanggal estimasi
+    const estimateDoneAt = new Date(
+        Date.now() + estimateDays * 24 * 60 * 60 * 1000
+    );
+ 
+    // Transaksi: order, item, dan payment dibuat bersamaan atau batal semua
+    return await db.transaction(async (tx) => {
+        const [order] = await tx
+            .insert(orders)
+            .values({
+                orderNumber,
+                customerId,
+                totalPrice,
+                estimateDoneAt // nama key HARUS sama dengan nama kolom di schema
+            })
+            .returning();
+ 
+        await tx
+            .insert(orderItems)
+            .values(
+                orderItemsData.map((item) => ({
+                    orderId: order.id,
+                    ...item
+                }))
+            );
+ 
+        // payment otomatis dibuat, status default "unpaid"
+        await tx
+            .insert(payments)
+            .values({
+                orderId: order.id,
+                amount: totalPrice
+            });
+ 
+        return order;
     });
-  }
-
-  const orderNumber = `ORD-${Date.now()}`;
-
-  const estimateDoneAt = new Date(
-    Date.now() + estimateDays * 24 * 60 * 60 * 1000,
-  );
-
-  const [order] = await db
-    .insert(orders)
-    .values({
-      orderNumber,
-      customerId,
-      totalPrice,
-      status: "diterima",
-      estimateDoneAt,
-    })
-    .returning();
-
-  await db.insert(orderItems).values(
-    orderItemsData.map((item) => ({
-      orderId: order.id,
-      ...item,
-    })),
-  );
-
-  return order;
 };
+
 
 const STATUS_FLOW = ["diterima", "diproses", "siap", "diambil"] as const;
 type OrderStatus = (typeof STATUS_FLOW)[number];

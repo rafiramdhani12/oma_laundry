@@ -108,9 +108,11 @@ const Orders = () => {
 
                     <div className="order-5 min-w-0 md:order-none">
                       <p className="font-bold text-gray-900">{formatRupiah(order.totalPrice)}</p>
-                      {order.paymentMethod ? (
+                      {/* Status bayar dibaca dari kolom payments.status di database */}
+                      {order.paymentStatus === "paid" ? (
                         <p className="text-xs font-medium text-emerald-600">
-                          Lunas · {PAYMENT_LABEL[order.paymentMethod]}
+                          Lunas
+                          {order.paymentMethod && ` · ${PAYMENT_LABEL[order.paymentMethod]}`}
                         </p>
                       ) : (
                         <p className="text-xs font-medium text-rose-500">Belum bayar</p>

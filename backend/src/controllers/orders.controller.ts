@@ -88,8 +88,23 @@ export const updateOrderStatusById = async (
     });
   }
 };
-export const createNewOrder = async (req : Request , res : Response) => {
-    const {customerId , estimateDays ,items} = req.body
-    const order = await createOrder(Number(customerId) , Number(estimateDays) , items)
-    res.json(order)
-}
+export const createNewOrder = async (req: Request, res: Response) => {
+    try {
+        const { customerId, estimateDays, items } = req.body;
+ 
+        const order = await createOrder(
+            Number(customerId),
+            Number(estimateDays),
+            items
+        );
+ 
+        res.status(201).json(order);
+    } catch (error) {
+        // Alasan asli dari Postgres (error.cause) muncul di terminal
+        console.error(error);
+ 
+        res.status(400).json({
+            message: error instanceof Error ? error.message : "Gagal membuat order"
+        });
+    }
+};
