@@ -12,7 +12,8 @@ import { markExpiredOrdersAsReady } from "./services/orders.services.ts"
 const app : Express = express()
 
 app.use(cors({
-    origin : "http://localhost:5173"}))
+    origin : ["http://localhost:5173" , "https://oma-laundry-jr35.vercel.app/"]
+}))
 
 app.use(express.json())
 
