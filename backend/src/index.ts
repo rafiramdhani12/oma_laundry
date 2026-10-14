@@ -11,9 +11,26 @@ import { markExpiredOrdersAsReady } from "./services/orders.services.ts"
 
 const app : Express = express()
 
-app.use(cors({
-    origin : ["http://localhost:5173" , "https://oma-laundry-jr35.vercel.app/"]
-}))
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "https://oma-laundry-jr35.vercel.app",
+]);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (
+        !origin ||
+        allowedOrigins.has(origin) ||
+        /^https:\/\/oma-laundry-jr35-[a-z0-9]+-rafis-projects-3c351dc8\.vercel\.app$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Origin tidak diizinkan oleh CORS"));
+      }
+    },
+  }),
+);
 
 app.use(express.json())
 
