@@ -33,7 +33,7 @@ const Orders = () => {
 
           <button
             type="button"
-            className="btn btn-primary w-full sm:w-auto"
+            className="btn bg-purple-600 w-full sm:w-auto text-white rounded-2xl"
             onClick={() => navigate("/orders/create")}
           >
             + Add Order
@@ -63,7 +63,7 @@ const Orders = () => {
               <p className="text-sm text-gray-500">Belum ada order.</p>
               <button
                 type="button"
-                className="btn btn-sm btn-primary"
+                className="btn btn-sm bg-purple-600 text-white"
                 onClick={() => navigate("/orders/create")}
               >
                 Buat order pertama

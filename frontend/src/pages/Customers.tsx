@@ -9,6 +9,7 @@ import {
   useDeleteCustomer,
 } from "../hooks/useCustomers";
 import type { Customer } from "../interface";
+import { useAuth } from "../hooks/useAuth";
 
 type CustomerForm = {
   name: string;
@@ -29,6 +30,8 @@ const Customers = () => {
     refetch,
   } = useCustomers();
 
+  const {user , isAdmin} = useAuth()
+
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
@@ -41,6 +44,7 @@ const Customers = () => {
 
   const [form, setForm] = useState<CustomerForm>(initialForm);
   const [formError, setFormError] = useState("");
+  
 
   const isSaving =
     createCustomer.isPending || updateCustomer.isPending;
@@ -149,14 +153,15 @@ const Customers = () => {
             >
               Edit
             </button>
-
-            <button
-              type="button"
-              className="btn btn-error btn-sm text-white"
-              onClick={() => setDeletingCustomer(customer)}
-            >
-              Hapus
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn btn-error btn-sm text-white"
+                onClick={() => setDeletingCustomer(customer)}
+              >
+                Hapus
+              </button>
+            )}
           </div>
         );
       },
@@ -188,7 +193,7 @@ const Customers = () => {
 
           <button
             type="button"
-            className="btn btn-primary w-full sm:w-auto"
+            className="btn bg-purple-600 text-white w-full sm:w-auto rounded-2xl"
             onClick={openCreateModal}
           >
             + Tambah Customer
@@ -241,7 +246,7 @@ const Customers = () => {
 
               <button
                 type="button"
-                className="btn btn-sm btn-primary"
+                className="btn btn-sm bg-purple-600 text-white"
                 onClick={openCreateModal}
               >
                 Tambah Customer

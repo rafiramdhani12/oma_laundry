@@ -9,6 +9,7 @@ import {
   useDeleteService,
 } from "../hooks/useServices";
 import type { Service } from "../interface";
+import { useAuth } from "../hooks/useAuth";
 
 type ServiceForm = {
   name: string;
@@ -37,6 +38,8 @@ const Services = () => {
     error,
     refetch,
   } = useServices();
+
+  const {isAdmin} = useAuth()
 
   const createService = useCreateService();
   const updateService = useUpdateService();
@@ -167,13 +170,15 @@ const Services = () => {
               Edit
             </button>
 
-            <button
-              type="button"
-              className="btn btn-error btn-sm text-white"
-              onClick={() => setDeletingService(service)}
-            >
-              Hapus
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn btn-error btn-sm text-white"
+                onClick={() => setDeletingService(service)}
+              >
+                Hapus
+              </button>
+            )}
           </div>
         );
       },
@@ -205,7 +210,7 @@ const Services = () => {
 
           <button
             type="button"
-            className="btn btn-primary w-full sm:w-auto"
+            className="btn bg-purple-600 text-white w-full sm:w-auto rounded-2xl"
             onClick={openCreateModal}
           >
             + Tambah Layanan
@@ -258,7 +263,7 @@ const Services = () => {
 
               <button
                 type="button"
-                className="btn btn-sm btn-primary"
+                className="btn btn-sm bg-purple-600 text-white"
                 onClick={openCreateModal}
               >
                 Tambah Layanan

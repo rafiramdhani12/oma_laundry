@@ -8,6 +8,7 @@ import {
   useDeleteUser,
 } from "../hooks/useUsers";
 import type { User } from "../interface";
+import { useAuth } from "../hooks/useAuth";
 
 type FormData = {
   name: string;
@@ -36,6 +37,9 @@ const Users = () => {
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [form, setForm] = useState<FormData>(initialForm);
   const [formError, setFormError] = useState("");
+  const {user , isAdmin} = useAuth()
+
+  console.log(user , isAdmin)
 
   const isSaving = createUser.isPending || updateUser.isPending;
 
@@ -165,7 +169,7 @@ const Users = () => {
             >
               Edit
             </button>
-
+            {isAdmin && (
             <button
               type="button"
               className="btn btn-error btn-sm text-white"
@@ -173,6 +177,8 @@ const Users = () => {
             >
               Hapus
             </button>
+
+            )}
           </div>
         );
       },
@@ -204,7 +210,7 @@ const Users = () => {
 
           <button
             type="button"
-            className="btn btn-primary w-full sm:w-auto"
+            className="btn bg-purple-600 text-white w-full sm:w-auto rounded-2xl"
             onClick={openCreateModal}
           >
             + Tambah Karyawan

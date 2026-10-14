@@ -269,36 +269,84 @@ export const createOrder = async (
     );
  
     // Transaksi: order, item, dan payment dibuat bersamaan atau batal semua
-    return await db.transaction(async (tx) => {
-        const [order] = await tx
-            .insert(orders)
-            .values({
-                orderNumber,
-                customerId,
-                totalPrice,
-                estimateDoneAt // nama key HARUS sama dengan nama kolom di schema
-            })
-            .returning();
- 
-        await tx
-            .insert(orderItems)
-            .values(
-                orderItemsData.map((item) => ({
-                    orderId: order.id,
-                    ...item
-                }))
-            );
- 
-        // payment otomatis dibuat, status default "unpaid"
-        await tx
-            .insert(payments)
-            .values({
-                orderId: order.id,
-                amount: totalPrice
-            });
- 
-        return order;
-    });
+
+const result = await db.execute(sql`
+  WITH new_order AS (
+    INSERT INTO orders (
+      "orderNumber",
+      "customerId",
+      "totalPrice",
+      "estimateDoneAt"
+    )
+    VALUES (
+      ${orderNumber},
+      ${customerId},
+      ${totalPrice},
+      ${estimateDoneAt}
+    )
+    RETURNING *
+  ),
+
+  new_items AS (
+    INSERT INTO order_items (
+      "orderId",
+      "serviceId",
+      quantity,
+      "unitPrice",
+      "totalPrice"
+    )
+    SELECT
+      o.id,
+      item."serviceId",
+      item.quantity,
+      item."unitPrice",
+      item."totalPrice"
+    FROM new_order AS o
+    CROSS JOIN jsonb_to_recordset(
+      ${JSON.stringify(orderItemsData)}::jsonb
+    ) AS item(
+      "serviceId" integer,
+      quantity real,
+      "unitPrice" integer,
+      "totalPrice" integer
+    )
+    RETURNING id
+  ),
+
+  new_payment AS (
+    INSERT INTO payments (
+      "orderId",
+      amount
+    )
+    SELECT
+      id,
+      "totalPrice"
+    FROM new_order
+    RETURNING id
+  )
+
+  SELECT
+    o.id,
+    o."orderNumber" AS "orderNumber",
+    o."customerId" AS "customerId",
+    o."totalPrice" AS "totalPrice",
+    o.status,
+    o."estimateDoneAt" AS "estimateDoneAt",
+    o."createdAt" AS "createdAt",
+    o."updatedAt" AS "updatedAt"
+  FROM new_order AS o
+  CROSS JOIN (SELECT count(*) FROM new_items) AS items_done
+  CROSS JOIN (SELECT count(*) FROM new_payment) AS payment_done
+`);
+
+const order = result.rows[0];
+
+if (!order) {
+  throw new Error("Gagal membuat order");
+}
+
+return order;
+
 };
 
 
