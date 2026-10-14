@@ -16,6 +16,15 @@ type LoginResponse = {
     };
 };
 
+type AuthUser = {id : number , name: string , role : "admin" | "worker"}
+
+export const useAuth = () => {
+    const saved = localStorage.getItem("user");
+    const user: AuthUser | null = saved ? JSON.parse(saved) : null;
+
+    return {user , isAdmin : user?.role === "admin"}
+} 
+
 export const useLogin = () => {
     const queryClient = useQueryClient();
 
@@ -31,6 +40,7 @@ export const useLogin = () => {
 
         onSuccess: (data) => {
             localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
 
             queryClient.setQueryData(
                 ["auth", "user"],

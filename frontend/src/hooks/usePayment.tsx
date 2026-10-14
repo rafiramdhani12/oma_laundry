@@ -27,6 +27,27 @@ queryFn: async () =>
 enabled: Number.isInteger(orderId) && orderId > 0,
 });
 
+export const usePayOrder = () => {
+  const queryClient = useQueryClient();
+ 
+  return useMutation({
+    mutationFn: async ({
+      id,
+      amount,
+      paymentMethod,
+    }: {
+      id: number;
+      amount: number;
+      paymentMethod: PaymentMethod;
+    }) => (await api.put(`/payments/${id}`, { amount, paymentMethod })).data,
+ 
+    // onSettled: berhasil atau gagal, selalu ambil ulang supaya yang tampil
+    // adalah status asli dari database.
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.all }),
+  });
+};
+
 // POST /payments
 export const useCreatePayment = () => {
 const queryClient = useQueryClient();

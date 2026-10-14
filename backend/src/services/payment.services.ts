@@ -1,7 +1,7 @@
 import db from "../config/db.ts";
 import { payments } from "../config/schema/payment.ts";
 import { orders } from "../config/schema/orders.ts";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const readAllPayments = async () => {
     return await db
@@ -26,7 +26,8 @@ export const readPaymentByOrderId = async (orderId: number) => {
 export const createPayment = async (
 orderId: number,
 amount: number,
-paymentMethod: "cash" | "transfer"
+paymentMethod: "cash" | "transfer",
+status: "unpaid"
 ) => {
 return await db.transaction(async (tx) => {
 const order = await tx
@@ -69,12 +70,51 @@ const order = await tx
         .values({
             orderId,
             amount,
-            paymentMethod
+            paymentMethod,
+            status
         })
         .returning();
 });
 
 };
+
+ 
+export const editPaymentStatus = async (
+    id: number,
+    amount: number,
+    paymentMethod: "cash" | "transfer"
+) => {
+    if (paymentMethod !== "cash" && paymentMethod !== "transfer") {
+        throw new Error("Metode pembayaran tidak valid");
+    }
+ 
+    if (!Number.isInteger(amount) || amount <= 0) {
+        throw new Error("Nominal pembayaran harus bilangan bulat positif");
+    }
+ 
+    const [row] = await db
+        .select({ status: payments.status, totalPrice: orders.totalPrice })
+        .from(payments)
+        .innerJoin(orders, eq(payments.orderId, orders.id))
+        .where(eq(payments.id, id));
+ 
+    // Tiga pesan terpisah supaya jelas masalahnya apa
+    if (!row) throw new Error("Pembayaran tidak ditemukan");
+    if (row.status === "paid") throw new Error("Pembayaran ini sudah lunas");
+    if (amount < row.totalPrice) throw new Error("Nominal kurang dari total tagihan");
+ 
+    // WHERE status = 'unpaid' => dua klik bersamaan tidak bisa membayar dua kali
+    const [updated] = await db
+        .update(payments)
+        .set({ status: "paid", amount, paymentMethod, paidAt: new Date() })
+        .where(and(eq(payments.id, id), eq(payments.status, "unpaid")))
+        .returning();
+ 
+    if (!updated) throw new Error("Pembayaran ini sudah lunas");
+ 
+    return { ...updated, change: updated.amount - row.totalPrice };
+};
+
 
 
 export const deletePayment = async (id: number) => {

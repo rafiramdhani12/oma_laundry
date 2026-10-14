@@ -33,7 +33,7 @@ const Orders = () => {
 
           <button
             type="button"
-            className="btn btn-primary w-full sm:w-auto"
+            className="btn bg-purple-600 w-full sm:w-auto text-white rounded-2xl"
             onClick={() => navigate("/orders/create")}
           >
             + Add Order
@@ -63,7 +63,7 @@ const Orders = () => {
               <p className="text-sm text-gray-500">Belum ada order.</p>
               <button
                 type="button"
-                className="btn btn-sm btn-primary"
+                className="btn btn-sm bg-purple-600 text-white"
                 onClick={() => navigate("/orders/create")}
               >
                 Buat order pertama
@@ -108,9 +108,11 @@ const Orders = () => {
 
                     <div className="order-5 min-w-0 md:order-none">
                       <p className="font-bold text-gray-900">{formatRupiah(order.totalPrice)}</p>
-                      {order.paymentMethod ? (
+                      {/* Status bayar dibaca dari kolom payments.status di database */}
+                      {order.paymentStatus === "paid" ? (
                         <p className="text-xs font-medium text-emerald-600">
-                          Lunas · {PAYMENT_LABEL[order.paymentMethod]}
+                          Lunas
+                          {order.paymentMethod && ` · ${PAYMENT_LABEL[order.paymentMethod]}`}
                         </p>
                       ) : (
                         <p className="text-xs font-medium text-rose-500">Belum bayar</p>

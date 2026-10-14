@@ -1,3 +1,6 @@
+// schema/payment.ts
+// Aturan: 1 order = 1 payment. Dibuat otomatis saat order dibuat (unpaid),
+// lalu diubah jadi paid saat pelanggan membayar.
 import {
     pgTable,
     serial,
@@ -13,11 +16,14 @@ export const paymentMethodEnum = pgEnum("payment_method", [
     "transfer"
 ]);
 
+export const paymentStatus = pgEnum("payment_status", ["paid", "unpaid"]);
+
 export const payments = pgTable("payments", {
     id: serial().primaryKey(),
 
     orderId: integer()
         .notNull()
+        .unique() // 1 order = 1 payment
         .references(() => orders.id, {
             onDelete: "cascade"
         }),
@@ -25,10 +31,13 @@ export const payments = pgTable("payments", {
     amount: integer()
         .notNull(),
 
-    paymentMethod: paymentMethodEnum()
-        .notNull(),
-
-    paidAt: timestamp()
+    status: paymentStatus()
         .notNull()
-        .defaultNow(),
+        .default("unpaid"),
+
+    // Belum diketahui saat order dibuat, jadi boleh kosong sampai dibayar
+    paymentMethod: paymentMethodEnum(),
+
+    // Kosong sampai dibayar (sebelumnya defaultNow, itu salah untuk yang belum bayar)
+    paidAt: timestamp(),
 });

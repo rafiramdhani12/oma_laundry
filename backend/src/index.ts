@@ -7,6 +7,7 @@ import cors from "cors"
 import orderItemsRoute from "./routes/orderItems.route.ts"
 import paymentsRoute from "./routes/payments.route.ts"
 import ordersRoute from "./routes/orders.route.ts"
+import { markExpiredOrdersAsReady } from "./services/orders.services.ts"
 
 const app : Express = express()
 
@@ -29,6 +30,23 @@ app.use(`/${prefixes}/services` , servicesRoute)
 app.use(`/${prefixes}/orders` , ordersRoute)
 app.use(`/${prefixes}/orderItems` , orderItemsRoute)
 app.use(`/${prefixes}/payments` , paymentsRoute)
+
+const runOrderScheduler = async () => {
+    try {
+     const updated = await markExpiredOrdersAsReady()   
+     if (updated.length > 0) {
+        console.log(`${updated.length} orders automatis berubah ke "siap"`)
+     }
+    } catch (error) {
+        console.error("Error running order scheduler:", error);
+    }
+}
+
+void runOrderScheduler()
+
+setInterval(() => {
+    void runOrderScheduler()
+},30_000)
 
 app.listen(3000 , () => {
     console.log("server is running on port 3000")

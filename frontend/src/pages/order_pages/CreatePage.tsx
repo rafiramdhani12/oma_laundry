@@ -11,6 +11,8 @@ import { useServices } from "../../hooks/useServices";
 
 import type { Customer, Service } from "../../interface";
 
+import { formatDateTime, formatRupiah } from "../../utils/format";
+
 type CustomerMode = "existing" | "new";
 
 type OrderItemForm = {
@@ -18,12 +20,6 @@ type OrderItemForm = {
   quantity: string;
 };
 
-const formatRupiah = (price: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(price);
 
 const CreatePage = () => {
   const navigate = useNavigate();
@@ -87,6 +83,44 @@ const CreatePage = () => {
       return total + Number(service.price) * quantity;
     }, 0);
   }, [items, services]);
+
+  const estimatedDurationHours = useMemo(() => {
+  // Semua item harus sudah memiliki layanan.
+  if (items.some((item) => !item.serviceId)) {
+    return null;
+  }
+
+  const selectedServices = items.map((item) =>
+    services.find(
+      (service) => service.id === Number(item.serviceId),
+    ),
+  );
+
+  if (selectedServices.some((service) => !service)) {
+    return null;
+  }
+
+  // Mengikuti durasi layanan terlama.
+  return Math.max(
+    ...selectedServices.map((service) =>
+      Number(service!.durationHours),
+    ),
+  );
+}, [items, services]);
+
+ const estimatedDoneAt = useMemo(() => {
+  if (
+    estimatedDurationHours === null ||
+    !Number.isFinite(estimatedDurationHours) ||
+    estimatedDurationHours <= 0
+  ) {
+    return null;
+  }
+
+  return new Date(
+    Date.now() + estimatedDurationHours * 60 * 60 * 1000,
+  );
+}, [estimatedDurationHours]);
 
   const updateItem = (
     index: number,
@@ -466,16 +500,54 @@ const CreatePage = () => {
             })}
 
             {/* date */}
-            <div className="grid grid-col gap-5 container md:flex justify-center md:gap-50">
-              <div>
-                <label htmlFor="">date start</label>
-              <input type="date" className="input" />
-              </div>
-              <div>
-                <label htmlFor="">date end</label>
-              <input type="date" className="input" />
-              </div>
+           <div className="space-y-2">
+            <label className="label">
+              <span className="label-text">Target selesai</span>
+            </label>
+
+           <div className="space-y-2 rounded-lg border border-base-300 p-4">
+              <h3 className="font-semibold">Estimasi Penyelesaian</h3>
+
+              {estimatedDurationHours !== null && estimatedDoneAt ? (
+                <>
+                  <p className="text-sm">
+                    Estimasi durasi:{" "}
+                    <span className="font-medium">
+                      {Math.floor(estimatedDurationHours / 24) > 0 &&
+                        `${Math.floor(estimatedDurationHours / 24)} hari`}
+
+                      {Math.floor(estimatedDurationHours / 24) > 0 &&
+                        estimatedDurationHours % 24 > 0 &&
+                        " "}
+
+                      {estimatedDurationHours % 24 > 0 &&
+                        `${estimatedDurationHours % 24} jam`}
+
+                      {estimatedDurationHours % 24 === 0 &&
+                        estimatedDurationHours < 24 &&
+                        `${estimatedDurationHours} jam`}
+                    </span>
+                  </p>
+
+                  <p className="text-sm text-base-content/60">
+                    Perkiraan selesai: {formatDateTime(estimatedDoneAt)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-base-content/60">
+                  Pilih layanan terlebih dahulu untuk melihat estimasi selesai.
+                </p>
+              )}
             </div>
+
+            <p className="text-sm text-base-content/60">
+              Estimasi selesai:{" "}
+              {estimatedDoneAt
+                ? formatDateTime(estimatedDoneAt)
+                : "-"}
+            </p>
+          </div>
+
           </section>
 
           {/* TOTAL */}

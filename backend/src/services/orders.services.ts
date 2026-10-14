@@ -4,7 +4,7 @@ import { orderItems } from "../config/schema/orderItems.ts";
 import { services } from "../config/schema/services.ts";
 import { customers } from "../config/schema/customers.ts";
 import { payments } from "../config/schema/payment.ts";
-import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, sql, lte} from "drizzle-orm";
 
 // Kolom yang dipakai buat tabel list (order + nama customer + info bayar)
 const orderSummaryColumns = {
@@ -14,6 +14,7 @@ const orderSummaryColumns = {
     totalPrice: orders.totalPrice,
     createdAt: orders.createdAt,
     customerName: customers.name,
+    paymentStatus: payments.status,
     paymentMethod: payments.paymentMethod, // null = belum dibayar
     paidAt: payments.paidAt,
 };
@@ -71,6 +72,7 @@ export const readOrderDetail = async (id: number) => {
             orderNumber: orders.orderNumber,
             status: orders.status,
             totalPrice: orders.totalPrice,
+            estimateDoneAt: orders.estimateDoneAt,
             createdAt: orders.createdAt,
             updatedAt: orders.updatedAt,
             customer: {
@@ -82,9 +84,9 @@ export const readOrderDetail = async (id: number) => {
         .from(orders)
         .innerJoin(customers, eq(orders.customerId, customers.id))
         .where(eq(orders.id, id));
-
+ 
     if (!order) return null;
-
+ 
     const [items, [payment]] = await Promise.all([
         db
             .select({
@@ -103,15 +105,30 @@ export const readOrderDetail = async (id: number) => {
             .select({
                 id: payments.id,
                 amount: payments.amount,
+                status: payments.status,
                 paymentMethod: payments.paymentMethod,
                 paidAt: payments.paidAt,
             })
             .from(payments)
             .where(eq(payments.orderId, id)),
     ]);
-
-    return { ...order, items, payment: payment ?? null };
+ 
+    return {
+        ...order,
+        items,
+        payment: payment
+            ? {
+                  ...payment,
+                  // kembalian dihitung di backend; 0 kalau belum dibayar
+                  change:
+                      payment.status === "paid"
+                          ? Math.max(0, payment.amount - order.totalPrice)
+                          : 0,
+              }
+            : null,
+    };
 };
+
 
 // fungsi agregat
 
@@ -193,64 +210,137 @@ export const readOrderStats = async () => {
 };
 
 
-export const createOrder = async (
-    customerId: number,
-    items: {
+export const createOrder = async (customerId: number,items: {serviceId: number;quantity: number;}[]) => {
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error("Order harus punya minimal satu item");
+    }
+ 
+    let totalPrice = 0;
+    let maxDurationHours = 0
+ 
+    const orderItemsData: {
         serviceId: number;
         quantity: number;
-    }[]
-) => {
-
-    let totalPrice = 0;
-
-    const orderItemsData = [];
-
+        unitPrice: number;
+        totalPrice: number;
+    }[] = [];
+ 
     for (const item of items) {
-
-        const service = await db
+        if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+            throw new Error("Jumlah item tidak valid");
+        }
+ 
+        const [service] = await db
             .select()
             .from(services)
             .where(eq(services.id, item.serviceId));
-
-        if (service.length === 0) {
+ 
+        if (!service) {
             throw new Error(`Service ${item.serviceId} not found`);
         }
-
-        const unitPrice = service[0].price;
-        const itemTotal = unitPrice * item.quantity;
-
+ 
+        // Math.round: quantity boleh desimal (2.5 kg), tapi kolom totalPrice bertipe integer
+        const itemTotal = Math.round(service.price * item.quantity);
         totalPrice += itemTotal;
 
+        maxDurationHours = Math.max(maxDurationHours, service.durationHours);
+ 
         orderItemsData.push({
             serviceId: item.serviceId,
             quantity: item.quantity,
-            unitPrice,
+            unitPrice: service.price,
             totalPrice: itemTotal
         });
     }
-
+ 
     const orderNumber = `ORD-${Date.now()}`;
+ 
+    // Target selesai (hari) -> tanggal estimasi
+    const estimateDoneAt = new Date(
+        Date.now() + maxDurationHours * 60 * 60 * 1000
+    );
+ 
+    // Transaksi: order, item, dan payment dibuat bersamaan atau batal semua
 
-    const [order] = await db
-        .insert(orders)
-        .values({
-            orderNumber,
-            customerId,
-            totalPrice
-        })
-        .returning();
+const result = await db.execute(sql`
+  WITH new_order AS (
+    INSERT INTO orders (
+      "orderNumber",
+      "customerId",
+      "totalPrice",
+      "estimateDoneAt"
+    )
+    VALUES (
+      ${orderNumber},
+      ${customerId},
+      ${totalPrice},
+      ${estimateDoneAt}
+    )
+    RETURNING *
+  ),
 
-    await db
-        .insert(orderItems)
-        .values(
-            orderItemsData.map((item) => ({
-                orderId: order.id,
-                ...item
-            }))
-        );
+  new_items AS (
+    INSERT INTO order_items (
+      "orderId",
+      "serviceId",
+      quantity,
+      "unitPrice",
+      "totalPrice"
+    )
+    SELECT
+      o.id,
+      item."serviceId",
+      item.quantity,
+      item."unitPrice",
+      item."totalPrice"
+    FROM new_order AS o
+    CROSS JOIN jsonb_to_recordset(
+      ${JSON.stringify(orderItemsData)}::jsonb
+    ) AS item(
+      "serviceId" integer,
+      quantity real,
+      "unitPrice" integer,
+      "totalPrice" integer
+    )
+    RETURNING id
+  ),
 
-    return order;
+  new_payment AS (
+    INSERT INTO payments (
+      "orderId",
+      amount
+    )
+    SELECT
+      id,
+      "totalPrice"
+    FROM new_order
+    RETURNING id
+  )
+
+  SELECT
+    o.id,
+    o."orderNumber" AS "orderNumber",
+    o."customerId" AS "customerId",
+    o."totalPrice" AS "totalPrice",
+    o.status,
+    o."estimateDoneAt" AS "estimateDoneAt",
+    o."createdAt" AS "createdAt",
+    o."updatedAt" AS "updatedAt"
+  FROM new_order AS o
+  CROSS JOIN (SELECT count(*) FROM new_items) AS items_done
+  CROSS JOIN (SELECT count(*) FROM new_payment) AS payment_done
+`);
+
+const order = result.rows[0];
+
+if (!order) {
+  throw new Error("Gagal membuat order");
+}
+
+return order;
+
 };
+
 
 const STATUS_FLOW = ["diterima", "diproses", "siap", "diambil"] as const;
 type OrderStatus = (typeof STATUS_FLOW)[number];
@@ -288,6 +378,24 @@ export const updateOrderStatus = async (id: number, status: OrderStatus) => {
     }
  
     return updated;
+};
+
+export const markExpiredOrdersAsReady = async () => {
+  const now = new Date();
+
+  return db
+    .update(orders)
+    .set({
+      status: "siap",
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(orders.status, "diproses"),
+        lte(orders.estimateDoneAt, now)
+      )
+    )
+    .returning({ id: orders.id });
 };
 
 

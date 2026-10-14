@@ -1,15 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "../../components/Layout";
-import {
-  useOrderDetail,
-  useUpdateOrderStatus,
-} from "../../hooks/useOrders";
-import {
-  usePayments,
-  useCreatePayment,
-  type PaymentMethod,
-} from "../../hooks/usePayment";
+import { useOrderDetail, useUpdateOrderStatus } from "../../hooks/useOrders";
+import { usePayOrder, type PaymentMethod } from "../../hooks/usePayment";
 import PrintReceiptButton from "../../components/PrintReceiptButton";
 import OrderReceipt from "../../components/OrderReceipt";
 import {
@@ -19,115 +12,81 @@ import {
   getNextStatus,
 } from "../../utils/status";
 
-const formatRupiah = (value: number) =>
-  `Rp${value.toLocaleString("id-ID")}`;
+const formatRupiah = (value: number) => `Rp${value.toLocaleString("id-ID")}`;
+
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
 const DetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const orderId = Number(id);
   const validOrderId = Number.isInteger(orderId) && orderId > 0;
 
-  const {
-    data: order,
-    isLoading,
-    isError,
-  } = useOrderDetail(orderId);
-
-  const {
-    data: payments = [],
-    isLoading: isPaymentsLoading,
-    isError: isPaymentsError,
-  } = usePayments(orderId);
+  const { data: order, isLoading, isError } = useOrderDetail(orderId);
 
   const updateStatus = useUpdateOrderStatus();
-  const createPayment = useCreatePayment();
+  const payOrder = usePayOrder();
 
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("cash");
   const [message, setMessage] = useState("");
-  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [amountReceived, setAmountReceived] = useState("");
+  const [payError, setPayError] = useState("");
 
   // Status diturunkan langsung dari data order, tidak perlu state sendiri.
   const currentIndex = order ? STATUS_FLOW.indexOf(order.status) : -1;
   const nextStatus = order ? getNextStatus(order.status) : null;
-
   const totalPrice = Number(order?.totalPrice ?? 0);
 
-  const paidAmount = payments.reduce(
-    (total : any, payment : any) => total + Number(payment.amount),
-    0,
-  );
-
-  const remainingAmount = Math.max(0, totalPrice - paidAmount);
-
-  const paymentStatus =
-    remainingAmount === 0
-      ? "Lunas"
-      : paidAmount > 0
-        ? "Dibayar sebagian"
-        : "Belum dibayar";
+  // Preview kembalian saat mengetik (hanya untuk tampilan).
+  // Angka resmi untuk nota dihitung backend dan datang lewat order.payment.change.
+  const received = Number(amountReceived);
+  const hasAmount = amountReceived !== "" && Number.isFinite(received);
+  const enough = hasAmount && Number.isInteger(received) && received >= totalPrice;
 
   const handleAdvanceStatus = async () => {
-    if (!validOrderId) {
-      setMessage("ID order tidak valid.");
-      return;
-    }
-
-    if (!nextStatus) return;
+    if (!validOrderId || !nextStatus) return;
 
     const confirmed = window.confirm(
-      `Ubah status menjadi "${STATUS_LABEL[nextStatus]}"? Status tidak bisa dikembalikan.`,
+      nextStatus === "diambil"
+        ? "Konfirmasi bahwa cucian sudah diambil customer?"
+        : `Ubah status order menjadi "${STATUS_LABEL[nextStatus]}"?`,
     );
+
     if (!confirmed) return;
 
     try {
       setMessage("");
-
-      await updateStatus.mutateAsync({
-        id: orderId,
-        status: nextStatus,
-      });
-
+      await updateStatus.mutateAsync({ id: orderId, status: nextStatus });
       setMessage("Status order berhasil diperbarui.");
     } catch {
-      setMessage("Gagal memperbarui status order.");
+      setMessage("Gagal memperbarui status order. Coba muat ulang halaman.");
     }
   };
 
-  const handleCreatePayment = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPaymentMessage("");
+  const handlePay = async () => {
+    if (!order?.payment) return;
 
-    const amount = Number(paymentAmount);
-
-    if (!validOrderId) {
-      setPaymentMessage("ID order tidak valid.");
-      return;
-    }
-
-    if (!Number.isInteger(amount) || amount <= 0) {
-      setPaymentMessage("Nominal pembayaran harus bilangan bulat positif.");
-      return;
-    }
-
-    if (amount > remainingAmount) {
-      setPaymentMessage("Nominal melebihi sisa tagihan.");
+    if (!enough) {
+      setPayError("Nominal kurang dari total tagihan.");
       return;
     }
 
     try {
-      await createPayment.mutateAsync({
-        orderId,
-        amount,
+      setPayError("");
+      await payOrder.mutateAsync({
+        id: order.payment.id,
+        amount: received,
         paymentMethod,
       });
-
-      setPaymentAmount("");
-      setPaymentMessage("Pembayaran berhasil dicatat.");
-    } catch {
-      setPaymentMessage(
-        "Pembayaran gagal disimpan. Periksa koneksi atau validasi backend.",
+      setAmountReceived("");
+    } catch (error: any) {
+      // Tampilkan pesan dari backend kalau ada
+      setPayError(
+        error?.response?.data?.message ?? "Gagal mencatat pembayaran. Coba lagi.",
       );
     }
   };
@@ -153,9 +112,7 @@ const DetailPage = () => {
         )}
 
         {isError && (
-          <div className="alert alert-error">
-            Gagal memuat detail order.
-          </div>
+          <div className="alert alert-error">Gagal memuat detail order.</div>
         )}
 
         {!isLoading && !isError && !order && validOrderId && (
@@ -168,13 +125,18 @@ const DetailPage = () => {
               <PrintReceiptButton />
             </div>
 
-            <OrderReceipt order={order} payments={payments} />
+            {/* Komponen nota menerima array, jadi bungkus payment tunggal */}
+            <OrderReceipt
+              order={order}
+              payments={order.payment?.status === "paid" ? [order.payment] : []}
+            />
+
             {/* INFORMASI ORDER */}
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body">
                 <h2 className="card-title">{order.orderNumber}</h2>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div>
                     <p className="text-sm opacity-60">Customer</p>
                     <p className="font-medium">{order.customer.name}</p>
@@ -183,7 +145,16 @@ const DetailPage = () => {
 
                   <div>
                     <p className="text-sm opacity-60">Tanggal Order</p>
-                    <p>{new Date(order.createdAt).toLocaleString("id-ID")}</p>
+                    <p>{formatDateTime(order.createdAt)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm opacity-60">Estimasi Selesai</p>
+                    <p>
+                      {order.estimateDoneAt
+                        ? formatDateTime(order.estimateDoneAt)
+                        : "Belum ditentukan"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -249,8 +220,7 @@ const DetailPage = () => {
                   <p
                     role="status"
                     className={
-                      message.startsWith("Gagal") ||
-                      message.startsWith("ID")
+                      message.startsWith("Gagal") || message.startsWith("ID")
                         ? "text-sm text-error"
                         : "text-sm text-success"
                     }
@@ -281,199 +251,132 @@ const DetailPage = () => {
               </div>
             </div>
 
-             {/* PEMBAYARAN */}
+            {/* PEMBAYARAN: unpaid -> paid, statusnya dari database */}
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body space-y-4">
-                <h2 className="card-title">Pembayaran</h2>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-box bg-base-200 p-4">
-                    <p className="text-sm opacity-60">Total Tagihan</p>
-                    <p className="text-lg font-bold">
-                      {formatRupiah(totalPrice)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-box bg-base-200 p-4">
-                    <p className="text-sm opacity-60">Sudah Dibayar</p>
-                    <p className="text-lg font-bold">
-                      {formatRupiah(paidAmount)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-box bg-base-200 p-4">
-                    <p className="text-sm opacity-60">Sisa Tagihan</p>
-                    <p className="text-lg font-bold">
-                      {formatRupiah(remainingAmount)}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-sm opacity-60">Status Pembayaran: </span>
+                <div className="flex items-center justify-between">
+                  <h2 className="card-title">Pembayaran</h2>
                   <span
                     className={`badge ${
-                      remainingAmount === 0
+                      order.payment?.status === "paid"
                         ? "badge-success"
-                        : paidAmount > 0
-                          ? "badge-warning"
-                          : "badge-error"
+                        : "badge-error"
                     }`}
                   >
-                    {paymentStatus}
+                    {order.payment?.status === "paid" ? "Lunas" : "Belum dibayar"}
                   </span>
                 </div>
 
-                {isPaymentsLoading && (
+                <div className="flex items-center justify-between">
+                  <span className="opacity-60">Total Tagihan</span>
+                  <span className="text-lg font-bold">
+                    {formatRupiah(totalPrice)}
+                  </span>
+                </div>
+
+                {!order.payment ? (
                   <p className="text-sm opacity-60">
-                    Memuat riwayat pembayaran...
+                    Data pembayaran belum tersedia.
                   </p>
-                )}
-
-                {isPaymentsError && (
-                  <div className="alert alert-error">
-                    Gagal memuat riwayat pembayaran. Jangan mencatat pembayaran
-                    sebelum riwayat berhasil dimuat.
+                ) : order.payment.status === "paid" ? (
+                  <div className="space-y-2 border-t border-base-300 pt-4 text-sm">
+                    <p className="opacity-70">
+                      Dibayar via{" "}
+                      {order.payment.paymentMethod === "cash" ? "Cash" : "Transfer"}
+                      {order.payment.paidAt &&
+                        ` pada ${formatDateTime(order.payment.paidAt)}`}
+                    </p>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Uang diterima</span>
+                      <span className="font-medium">
+                        {formatRupiah(order.payment.amount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Kembalian</span>
+                      <span className="font-medium">
+                        {formatRupiah(order.payment.change)}
+                      </span>
+                    </div>
                   </div>
-                )}
-
-                {!isPaymentsLoading && !isPaymentsError && (
-                  <>
-                    <h3 className="font-semibold">Riwayat Pembayaran</h3>
-
-                    {payments.length === 0 ? (
-                      <p className="text-sm opacity-60">
-                        Belum ada pembayaran.
-                      </p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="table">
-                          <thead>
-                            <tr>
-                              <th>Waktu</th>
-                              <th>Metode</th>
-                              <th>Nominal</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {payments.map((payment : any) => (
-                              <tr key={payment.id}>
-                                <td>
-                                  {new Date(payment.paidAt).toLocaleString(
-                                    "id-ID",
-                                  )}
-                                </td>
-                                <td>
-                                  {payment.paymentMethod === "cash"
-                                    ? "Cash"
-                                    : "Transfer"}
-                                </td>
-                                <td>{formatRupiah(Number(payment.amount))}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {remainingAmount > 0 && (
-                  <form
-                    className="space-y-4 border-t border-base-300 pt-4"
-                    onSubmit={handleCreatePayment}
-                  >
-                    <h3 className="font-semibold">Catat Pembayaran</h3>
-
+                ) : (
+                  <div className="space-y-4 border-t border-base-300 pt-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="form-control w-full">
-                        <span className="label-text mb-2">
-                          Nominal Pembayaran (rupiah)
-                        </span>
-                        <input
-                          type="number"
-                          className="input input-bordered w-full"
-                          min={1}
-                          max={remainingAmount}
-                          step={1}
-                          value={paymentAmount}
-                          onChange={(event) =>
-                            setPaymentAmount(event.target.value)
-                          }
-                          placeholder="Contoh: 30000"
-                          required
-                          disabled={
-                            createPayment.isPending ||
-                            isPaymentsLoading ||
-                            isPaymentsError
-                          }
-                        />
-                        <span className="label-text-alt mt-1 opacity-60">
-                          Maksimal {formatRupiah(remainingAmount)}
-                        </span>
-                      </label>
-
-                      <label className="form-control w-full">
-                        <span className="label-text mb-2">
-                          Metode Pembayaran
-                        </span>
+                        <span className="label-text mb-2">Metode Pembayaran</span>
                         <select
                           className="select select-bordered w-full"
                           value={paymentMethod}
                           onChange={(event) =>
-                            setPaymentMethod(
-                              event.target.value as PaymentMethod,
-                            )
+                            setPaymentMethod(event.target.value as PaymentMethod)
                           }
-                          disabled={createPayment.isPending}
+                          disabled={payOrder.isPending}
                         >
                           <option value="cash">Cash</option>
                           <option value="transfer">Transfer</option>
                         </select>
                       </label>
+
+                      <label className="form-control w-full">
+                        <span className="label-text mb-2">
+                          Uang diterima (rupiah)
+                        </span>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            className="input input-bordered w-full"
+                            min={totalPrice}
+                            step={1}
+                            value={amountReceived}
+                            onChange={(event) => setAmountReceived(event.target.value)}
+                            placeholder={`Minimal ${totalPrice}`}
+                            disabled={payOrder.isPending}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            onClick={() => setAmountReceived(String(totalPrice))}
+                            disabled={payOrder.isPending}
+                          >
+                            Uang pas
+                          </button>
+                        </div>
+                      </label>
                     </div>
 
-                    {paymentMessage && (
-                      <p
-                        role="status"
-                        className={
-                          paymentMessage.startsWith("Pembayaran berhasil")
-                            ? "text-sm text-success"
-                            : "text-sm text-error"
-                        }
-                      >
-                        {paymentMessage}
-                      </p>
+                    {hasAmount && (
+                      <div className="flex items-center justify-between rounded-box bg-base-200 p-4">
+                        <span className="opacity-60">
+                          {enough ? "Kembalian" : "Kurang"}
+                        </span>
+                        <span
+                          className={`text-lg font-bold ${enough ? "" : "text-error"}`}
+                        >
+                          {formatRupiah(Math.abs(received - totalPrice))}
+                        </span>
+                      </div>
                     )}
+
+                    {payError && <p className="text-sm text-error">{payError}</p>}
 
                     <div className="card-actions justify-end">
                       <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={
-                          createPayment.isPending ||
-                          isPaymentsLoading ||
-                          isPaymentsError ||
-                          remainingAmount <= 0
-                        }
+                        type="button"
+                        className="btn btn-primary w-full sm:w-auto"
+                        onClick={handlePay}
+                        disabled={payOrder.isPending || !enough}
                       >
-                        {createPayment.isPending && (
+                        {payOrder.isPending && (
                           <span className="loading loading-spinner loading-sm" />
                         )}
-                        Catat Pembayaran
+                        Tandai Lunas
                       </button>
                     </div>
-                  </form>
-                )}
-
-                {remainingAmount === 0 && !isPaymentsError && (
-                  <div className="alert alert-success">
-                    Tagihan order ini sudah lunas.
                   </div>
                 )}
               </div>
             </div>
-
           </>
         )}
       </section>

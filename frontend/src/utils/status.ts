@@ -34,3 +34,12 @@ export const STATUS_ACTION: Record<OrderStatus, string> = {
   siap: "Tandai Siap Diambil",
   diambil: "Tandai Sudah Diambil",
 };
+
+export const isOverdue = (order: {
+  status: OrderStatus;
+  estimatedDoneAt: string | null;
+}) =>
+  !!order.estimatedDoneAt &&
+  order.status !== "siap" &&
+  order.status !== "diambil" &&
+  new Date(order.estimatedDoneAt) < new Date();

@@ -1,0 +1,3 @@
+ALTER TABLE "orders" ALTER COLUMN "estimateDoneAt" SET DATA TYPE timestamp with time zone USING "estimateDoneAt"::timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "orders" ALTER COLUMN "createdAt" SET DATA TYPE timestamp with time zone USING "createdAt"::timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "orders" ALTER COLUMN "updatedAt" SET DATA TYPE timestamp with time zone USING "updatedAt"::timestamp with time zone;

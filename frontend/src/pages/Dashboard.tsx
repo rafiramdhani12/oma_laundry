@@ -49,7 +49,7 @@ const Dashboard = () => {
     <Layout>
       <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:gap-6">
         {/* Banner */}
-        <section className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-5 text-white shadow-lg sm:p-6">
+        <section className="rounded-2xl bg-purple-600 p-5 text-white shadow-lg sm:p-6">
           <p className="text-sm text-indigo-100">Sistem internal Oma Laundry</p>
 
           <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -61,7 +61,7 @@ const Dashboard = () => {
             <button
               type="button"
               onClick={() => navigate("/orders/create")}
-              className="btn w-full border-0 bg-white text-indigo-600 shadow hover:bg-indigo-50 sm:w-auto"
+              className="btn w-full border-0 bg-white text-purple-600 shadow hover:bg-indigo-50 sm:w-auto"
             >
               + Buat Order
             </button>

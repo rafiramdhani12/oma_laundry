@@ -52,15 +52,58 @@ export const deleteOrderById = async (req : Request , res : Response) => {
     res.json(order)
 }
 
-export const updateOrderStatusById = async (req : Request , res : Response) => {
-    const {id} = req.params
-    const {status} = req.body
-    const order = await updateOrderStatus(Number(id) , status)
-    res.json(order)
-}
+const STATUS_FLOW = [
+  "diterima",
+  "diproses",
+  "siap",
+  "diambil",
+] as const;
 
-export const createNewOrder = async (req : Request , res : Response) => {
-    const {customerId , items} = req.body
-    const order = await createOrder(Number(customerId) , items)
-    res.json(order)
-}
+type OrderStatus = (typeof STATUS_FLOW)[number];
+
+export const updateOrderStatusById = async (
+  req: Request,
+  res: Response
+) => {
+  const id = Number(req.params.id);
+  const status: unknown = req.body.status;
+
+  if (
+    typeof status !== "string" ||
+    !STATUS_FLOW.some((validStatus) => validStatus === status)
+  ) {
+    res.status(400).json({ message: "Status tidak valid" });
+    return;
+  }
+
+  try {
+    const order = await updateOrderStatus(id, status as OrderStatus);
+    res.json(order);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Gagal memperbarui status order",
+    });
+  }
+};
+export const createNewOrder = async (req: Request, res: Response) => {
+    try {
+        const { customerId, items } = req.body;
+ 
+        const order = await createOrder(
+            Number(customerId),
+            items
+        );
+ 
+        res.status(201).json(order);
+    } catch (error) {
+        // Alasan asli dari Postgres (error.cause) muncul di terminal
+        console.error(error);
+ 
+        res.status(400).json({
+            message: error instanceof Error ? error.message : "Gagal membuat order"
+        });
+    }
+};

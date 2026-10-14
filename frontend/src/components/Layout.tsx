@@ -85,8 +85,8 @@ const MenuItem = ({
             className={({ isActive }) =>
                 `rounded-lg px-4 py-3 transition ${
                     isActive
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-300 hover:bg-gray-800"
+                        ? "bg-white text-purple-900"
+                        : "text-gray-300 hover:bg-white hover:text-purple-900"
                 }`
             }
         >
@@ -145,7 +145,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <aside
                     className={`
                         fixed inset-y-0 left-0 z-50 w-64
-                        bg-gray-900 p-5 text-white flex flex-col
+                        bg-purple-900 p-5 text-white flex flex-col
                         transition-transform duration-200
                         md:sticky md:top-0 md:z-auto
                         md:h-screen md:translate-x-0
@@ -165,7 +165,7 @@ const Layout = ({ children }: LayoutProps) => {
                             type="button"
                             onClick={() => setSidebarOpen(false)}
                             aria-label="Close sidebar"
-                            className="rounded p-2 hover:bg-gray-800 md:hidden"
+                            className="rounded p-2 hover:bg-white md:hidden"
                         >
                             ✕
                         </button>
