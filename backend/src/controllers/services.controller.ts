@@ -13,15 +13,15 @@ export const getServiceById = async (req : Request , res : Response) => {
 }
 
 export const addNewService = async (req : Request , res : Response) => {
-    const {name , unit , price} = req.body
-    const service = await createService(name , unit , price)
+    const {name , unit , price , durationHours} = req.body
+    const service = await createService(name , unit , price , durationHours)
     res.json(service)
 }
 
 export const editService = async (req : Request , res : Response) => {
     const {id} = req.params
-    const {name , unit , price} = req.body
-    const service = await updateService(Number(id) , name , unit , price)
+    const {name , unit , price , durationHours} = req.body
+    const service = await updateService(Number(id) , name , unit , price , durationHours)
     res.json(service)
 }
 

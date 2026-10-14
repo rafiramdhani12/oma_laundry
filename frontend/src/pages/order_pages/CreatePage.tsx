@@ -11,7 +11,7 @@ import { useServices } from "../../hooks/useServices";
 
 import type { Customer, Service } from "../../interface";
 
-import { formatDateTime } from "../../utils/format";
+import { formatDateTime, formatRupiah } from "../../utils/format";
 
 type CustomerMode = "existing" | "new";
 
@@ -20,12 +20,6 @@ type OrderItemForm = {
   quantity: string;
 };
 
-const formatRupiah = (price: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(price);
 
 const CreatePage = () => {
   const navigate = useNavigate();
@@ -56,7 +50,6 @@ const CreatePage = () => {
   ]);
 
   const [formError, setFormError] = useState("");
-  const [estimateDays , setEstimateDays] = useState("1");
 
   const isSubmitting =
     createOrder.isPending || createCustomer.isPending;
@@ -91,16 +84,43 @@ const CreatePage = () => {
     }, 0);
   }, [items, services]);
 
-  const estimatedDoneAt = useMemo(() => {
-  const days = Number(estimateDays);
-
-  if (!Number.isInteger(days) || days < 1 || days > 7) {
+  const estimatedDurationHours = useMemo(() => {
+  // Semua item harus sudah memiliki layanan.
+  if (items.some((item) => !item.serviceId)) {
     return null;
   }
 
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-}, [estimateDays]);
+  const selectedServices = items.map((item) =>
+    services.find(
+      (service) => service.id === Number(item.serviceId),
+    ),
+  );
 
+  if (selectedServices.some((service) => !service)) {
+    return null;
+  }
+
+  // Mengikuti durasi layanan terlama.
+  return Math.max(
+    ...selectedServices.map((service) =>
+      Number(service!.durationHours),
+    ),
+  );
+}, [items, services]);
+
+ const estimatedDoneAt = useMemo(() => {
+  if (
+    estimatedDurationHours === null ||
+    !Number.isFinite(estimatedDurationHours) ||
+    estimatedDurationHours <= 0
+  ) {
+    return null;
+  }
+
+  return new Date(
+    Date.now() + estimatedDurationHours * 60 * 60 * 1000,
+  );
+}, [estimatedDurationHours]);
 
   const updateItem = (
     index: number,
@@ -176,7 +196,6 @@ const CreatePage = () => {
 
       await createOrder.mutateAsync({
         customerId,
-        estimateDays: Number(estimateDays),
         items: items.map((item) => ({
           serviceId: Number(item.serviceId),
           quantity: Number(item.quantity),
@@ -486,17 +505,40 @@ const CreatePage = () => {
               <span className="label-text">Target selesai</span>
             </label>
 
-            <select
-              className="select select-bordered w-full"
-              value={estimateDays}
-              onChange={(event) => setEstimateDays(event.target.value)}
-            >
-              <option value="1">1 hari</option>
-              <option value="2">2 hari</option>
-              <option value="3">3 hari</option>
-              <option value="5">5 hari</option>
-              <option value="7">7 hari</option>
-            </select>
+           <div className="space-y-2 rounded-lg border border-base-300 p-4">
+              <h3 className="font-semibold">Estimasi Penyelesaian</h3>
+
+              {estimatedDurationHours !== null && estimatedDoneAt ? (
+                <>
+                  <p className="text-sm">
+                    Estimasi durasi:{" "}
+                    <span className="font-medium">
+                      {Math.floor(estimatedDurationHours / 24) > 0 &&
+                        `${Math.floor(estimatedDurationHours / 24)} hari`}
+
+                      {Math.floor(estimatedDurationHours / 24) > 0 &&
+                        estimatedDurationHours % 24 > 0 &&
+                        " "}
+
+                      {estimatedDurationHours % 24 > 0 &&
+                        `${estimatedDurationHours % 24} jam`}
+
+                      {estimatedDurationHours % 24 === 0 &&
+                        estimatedDurationHours < 24 &&
+                        `${estimatedDurationHours} jam`}
+                    </span>
+                  </p>
+
+                  <p className="text-sm text-base-content/60">
+                    Perkiraan selesai: {formatDateTime(estimatedDoneAt)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-base-content/60">
+                  Pilih layanan terlebih dahulu untuk melihat estimasi selesai.
+                </p>
+              )}
+            </div>
 
             <p className="text-sm text-base-content/60">
               Estimasi selesai:{" "}

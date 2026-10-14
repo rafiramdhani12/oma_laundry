@@ -23,6 +23,7 @@ export type Service = {
   name: string;
   unit: string;
   price: number;
+  durationHours: number;
 };
 
 export type Order = {

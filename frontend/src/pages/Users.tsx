@@ -171,7 +171,7 @@ const Users = () => {
             </button>
             {isAdmin && (
             <button
-              type="button"
+              type="button"w
               className="btn btn-error btn-sm text-white"
               onClick={() => setDeletingUser(user)}
             >

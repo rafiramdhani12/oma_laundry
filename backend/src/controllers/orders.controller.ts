@@ -90,11 +90,10 @@ export const updateOrderStatusById = async (
 };
 export const createNewOrder = async (req: Request, res: Response) => {
     try {
-        const { customerId, estimateDays, items } = req.body;
+        const { customerId, items } = req.body;
  
         const order = await createOrder(
             Number(customerId),
-            Number(estimateDays),
             items
         );
  

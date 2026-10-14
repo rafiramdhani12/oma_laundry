@@ -5,7 +5,6 @@ import type { OrderDetail, OrderListItem, OrderRecent, OrderStats, OrderStatus }
 
 type CreateOrderPayload = {
   customerId: number;
-  estimateDoneAt: number;
   items: {
     serviceId: number;
     quantity: number;

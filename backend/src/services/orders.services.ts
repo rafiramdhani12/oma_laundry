@@ -210,23 +210,13 @@ export const readOrderStats = async () => {
 };
 
 
-export const createOrder = async (
-    customerId: number,
-    estimateDays: number, // "Target selesai" dari form (dalam hari)
-    items: {
-        serviceId: number;
-        quantity: number;
-    }[]
-) => {
+export const createOrder = async (customerId: number,items: {serviceId: number;quantity: number;}[]) => {
     if (!Array.isArray(items) || items.length === 0) {
         throw new Error("Order harus punya minimal satu item");
     }
  
-    if (!Number.isInteger(estimateDays) || estimateDays <= 0) {
-        throw new Error("Target selesai tidak valid");
-    }
- 
     let totalPrice = 0;
+    let maxDurationHours = 0
  
     const orderItemsData: {
         serviceId: number;
@@ -252,6 +242,8 @@ export const createOrder = async (
         // Math.round: quantity boleh desimal (2.5 kg), tapi kolom totalPrice bertipe integer
         const itemTotal = Math.round(service.price * item.quantity);
         totalPrice += itemTotal;
+
+        maxDurationHours = Math.max(maxDurationHours, service.durationHours);
  
         orderItemsData.push({
             serviceId: item.serviceId,
@@ -265,7 +257,7 @@ export const createOrder = async (
  
     // Target selesai (hari) -> tanggal estimasi
     const estimateDoneAt = new Date(
-        Date.now() + estimateDays * 24 * 60 * 60 * 1000
+        Date.now() + maxDurationHours * 60 * 60 * 1000
     );
  
     // Transaksi: order, item, dan payment dibuat bersamaan atau batal semua

@@ -10,25 +10,23 @@ import {
 } from "../hooks/useServices";
 import type { Service } from "../interface";
 import { useAuth } from "../hooks/useAuth";
+import { formatRupiah } from "../utils/format";
 
 type ServiceForm = {
   name: string;
   unit: string;
   price: string;
+  durationValue : string;
+  durationUnit : "hours" | "days"
 };
 
 const initialForm: ServiceForm = {
   name: "",
   unit: "",
   price: "",
+  durationValue : "",
+  durationUnit : "hours"
 };
-
-const formatRupiah = (price: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(price);
 
 const Services = () => {
   const {
@@ -65,11 +63,17 @@ const Services = () => {
   };
 
   const openEditModal = (service: Service) => {
+    const useDays = service.durationHours % 24 == 0
+
     setEditingService(service);
     setForm({
       name: service.name,
       unit: service.unit,
       price: String(service.price),
+      durationValue : String(
+        useDays ? service.durationHours / 24 : service.durationHours
+      ),
+      durationUnit : useDays ? "days" : "hours"
     });
     setFormError("");
     setModalOpen(true);
@@ -91,6 +95,7 @@ const Services = () => {
     const name = form.name.trim();
     const unit = form.unit.trim();
     const price = Number(form.price);
+    const durationValue = Number(form.durationValue);
 
     if (!name || !unit) {
       setFormError("Nama layanan dan satuan wajib diisi.");
@@ -106,7 +111,9 @@ const Services = () => {
       return;
     }
 
-    const payload = { name, unit, price };
+    const durationHours = form.durationUnit === "days" ? durationValue * 24 : durationValue;
+
+    const payload = { name, unit, price , durationHours};
 
     if (editingService) {
       updateService.mutate(
@@ -150,6 +157,10 @@ const Services = () => {
       header: "Harga",
       accessor: "price",
       render: (row) => formatRupiah(Number(row.price)),
+    },
+    {
+      header: "Durasi(jam)",
+      accessor: "durationHours",
     },
     {
       header: "Aksi",
@@ -402,6 +413,52 @@ const Services = () => {
                   disabled={isSaving}
                   required
                 />
+              </div>
+
+              <div className="form-control">
+                <label htmlFor="service-duration" className="label">
+                  <span className="label-text font-medium">
+                    Estimasi durasi layanan
+                  </span>
+                </label>
+
+                <div className="flex gap-2">
+                  <input
+                    id="service-duration"
+                    type="number"
+                    min="1"
+                    step="1"
+                    className="input input-bordered min-w-0 flex-1"
+                    value={form.durationValue}
+                    onChange={(event) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        durationValue: event.target.value,
+                      }))
+                    }
+                    disabled={isSaving}
+                    required
+                  />
+
+                  <select
+                    className="select select-bordered"
+                    value={form.durationUnit}
+                    onChange={(event) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        durationUnit: event.target.value as "hours" | "days",
+                      }))
+                    }
+                    disabled={isSaving}
+                  >
+                    <option value="hours">Jam</option>
+                    <option value="days">Hari</option>
+                  </select>
+                </div>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Contoh: Cuci Reguler 3 hari, Cuci Express 4 jam.
+                </p>
               </div>
 
               {formError && (
