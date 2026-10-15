@@ -1,20 +1,19 @@
 import { useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useLogout } from "../hooks/useAuth";
+import { useAuth, useLogout } from "../hooks/useAuth";
 
 type LayoutProps = {
     children: ReactNode;
 };
 
-// FAKTA 1: Di TypeScript, kalau bentuk objeknya berubah, kita harus buat Tipe (Type/Interface) baru.
-// Kita buat NavItemType agar TypeScript tahu bahwa sebuah menu bisa punya 'path' atau 'children' (sub-menu).
+
 type NavItemType = {
     name: string;
     path?: string; // Tanda '?' berarti optional (boleh tidak ada) karena menu dropdown utama kadang tidak punya link
     children?: { name: string; path: string }[]; // Array berisi sub-menu
 };
 
-// FAKTA 2: Menambahkan "flag" berupa array `children` pada menu Orders dan Customers.
+
 const navigation: NavItemType[] = [
     { name: "Dashboard", path: "/dashboard" },
     { name: "Orders", path: "/orders" },
@@ -23,8 +22,6 @@ const navigation: NavItemType[] = [
     { name: "Employees", path: "/users" },
 ];
 
-// FAKTA 3: Kita buat komponen kecil untuk menangani logika per item menu.
-// Ini penting agar state 'isOpen' (buka/tutup) hanya berlaku untuk menu yang diklik, bukan membuka semua dropdown sekaligus.
 const MenuItem = ({ 
     item, 
     closeSidebar 
@@ -111,6 +108,8 @@ const Layout = ({ children }: LayoutProps) => {
         }
     }
 
+    const {user} = useAuth()
+
     return (
         <div className="min-h-screen bg-gray-100">
             {/* Mobile header */}
@@ -171,7 +170,6 @@ const Layout = ({ children }: LayoutProps) => {
                         </button>
                     </div>
 
-                    {/* FAKTA 5: Area navigasi utama di-map ke komponen MenuItem yang baru kita buat */}
                     <nav className="flex flex-col gap-2 flex-1 overflow-y-auto">
                         {navigation.map((item) => (
                             <MenuItem 
@@ -181,6 +179,12 @@ const Layout = ({ children }: LayoutProps) => {
                             />
                         ))}
                     </nav>
+
+                    <div>
+                        <p className="text-sm font-medium text-white">
+                            selamat datang <span className="font-bold uppercase">{user?.name}</span>
+                        </p>
+                    </div>
                     
                     <div className="mt-auto pt-4">
                         <button onClick={() => handleLogout()} className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 w-full text-white transition">

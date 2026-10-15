@@ -1,5 +1,5 @@
 import {type Request , type Response} from "express"
-import {createOrder , deleteOrder , readAllOrders , readAllOrdersWithSummary, readOrderById , readOrdersToday, updateOrderStatus , readOrderDetail, readRecentOrders, readOrderStats} from "../services/orders.services.ts";
+import {createOrder , deleteOrder , readAllOrders , readAllOrdersWithSummary, readOrderById , readOrdersToday, updateOrderStatus , readOrderDetail, readRecentOrders, readOrderStats, readOmzet} from "../services/orders.services.ts";
 
 export const getAllOrders = async (req : Request , res : Response) => {
     const orders = await readAllOrders()
@@ -43,6 +43,11 @@ export const getRecentOrders = async (req : Request , res : Response) => {
 
 export const getOrderStats = async (req : Request , res : Response) => {
     const orders = await readOrderStats()
+    res.json(orders)
+}
+
+export const getOmzet = async (req : Request , res : Response) => {
+    const orders = await readOmzet()
     res.json(orders)
 }
 

@@ -29,8 +29,13 @@ export const useOrdersToday = () =>
 export const useOrderStats = () =>
   useQuery({
     queryKey: queryKeys.orders.stats,
-    queryFn: async () => (await api.get<OrderStats>("/orders/stats")).data,
+    queryFn: async () => (await api.get("/orders/stats")).data,
   });
+
+export const useGetOmzet = () => useQuery({
+  queryKey: queryKeys.orders.omzet,
+  queryFn: async () => (await api.get("/orders/omzet")).data,
+})
  
 
 

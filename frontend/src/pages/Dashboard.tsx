@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import RecentOrders from "../components/RecentOrders";
 import StatCard, { type StatCardProps, type Tone } from "../components/StatCard";
-import { useOrderStats, useRecentOrders } from "../hooks/useOrders";
+import { useGetOmzet, useOrderStats, useRecentOrders } from "../hooks/useOrders";
 import type { OrderStatus } from "../interface";
 import { formatDate, formatRupiah } from "../utils/format";
 import { STATUS_LABEL } from "../utils/status";
@@ -18,10 +18,18 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const recent = useRecentOrders();
   const stats = useOrderStats();
+  const omzet = useGetOmzet();
+  console.log(omzet);
+
+console.log("Omzet query:", omzet);
+console.log("Omzet data:", omzet.data);
+console.log("Omzet value:", omzet.data?.omzet);
+console.log("Omzet type:", typeof omzet.data?.omzet);
 
   // undefined = loading (skeleton), "-" = gagal
   const fallback = stats.isError ? "-" : undefined;
   const s = stats.data;
+  const o = omzet.data;
 
   const cards: StatCardProps[] = [
     {
@@ -43,6 +51,13 @@ const Dashboard = () => {
       tone,
       value: s?.statusCount[status] ?? fallback,
     })),
+      {
+      title: "total Omzet",
+      icon: "💰",
+      tone: "indigo",
+      value: o ? formatRupiah(o.omzet) : omzet.isError ? "-" : undefined,
+      className: "col-span-2 lg:col-span-1", // full width di HP
+    },
   ];
 
   return (

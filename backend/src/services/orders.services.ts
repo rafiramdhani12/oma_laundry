@@ -4,7 +4,7 @@ import { orderItems } from "../config/schema/orderItems.ts";
 import { services } from "../config/schema/services.ts";
 import { customers } from "../config/schema/customers.ts";
 import { payments } from "../config/schema/payment.ts";
-import { and, count, desc, eq, gte, inArray, lt, sql, lte} from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, sql, lte, sum} from "drizzle-orm";
 
 // Kolom yang dipakai buat tabel list (order + nama customer + info bayar)
 const orderSummaryColumns = {
@@ -208,6 +208,11 @@ export const readOrderStats = async () => {
         statusCount,
     };
 };
+
+export const readOmzet = async () => {
+    const [result] = await db.select({ omzet: sum(orders.totalPrice) }).from(orders);
+    return {omzet : Number(result.omzet)}
+}
 
 
 export const createOrder = async (customerId: number,items: {serviceId: number;quantity: number;}[]) => {

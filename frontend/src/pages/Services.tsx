@@ -173,15 +173,15 @@ const Services = () => {
 
         return (
           <div className="flex flex-wrap gap-2">
-            <button
+            {isAdmin && (
+              <>
+              <button
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => openEditModal(service)}
             >
               Edit
             </button>
-
-            {isAdmin && (
               <button
                 type="button"
                 className="btn btn-error btn-sm text-white"
@@ -189,6 +189,7 @@ const Services = () => {
               >
                 Hapus
               </button>
+              </>
             )}
           </div>
         );
@@ -219,6 +220,7 @@ const Services = () => {
             </p>
           </div>
 
+          {isAdmin && (
           <button
             type="button"
             className="btn bg-purple-600 text-white w-full sm:w-auto rounded-2xl"
@@ -226,6 +228,8 @@ const Services = () => {
           >
             + Tambah Layanan
           </button>
+          )}
+
         </div>
 
         {/* Daftar layanan */}

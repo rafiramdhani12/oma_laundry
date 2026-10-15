@@ -191,13 +191,13 @@ const Customers = () => {
             </p>
           </div>
 
-          <button
+          {/* <button
             type="button"
             className="btn bg-purple-600 text-white w-full sm:w-auto rounded-2xl"
             onClick={openCreateModal}
           >
             + Tambah Customer
-          </button>
+          </button> */}
         </div>
 
         {/* Daftar customer */}
