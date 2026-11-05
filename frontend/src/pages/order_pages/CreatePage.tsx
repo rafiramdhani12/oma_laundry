@@ -1,6 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import Layout from "../../components/Layout";
 
 import { useCreateOrder } from "../../hooks/useOrders";
 import {
@@ -214,7 +213,7 @@ const CreatePage = () => {
   };
 
   return (
-    <Layout>
+    <>
       <section className="mx-auto max-w-4xl space-y-6">
         <div>
           <button
@@ -597,7 +596,7 @@ const CreatePage = () => {
           </div>
         </form>
       </section>
-    </Layout>
+    </>
   );
 };
 

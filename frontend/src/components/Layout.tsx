@@ -1,11 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate , Outlet} from "react-router-dom";
 import { useAuth, useLogout } from "../hooks/useAuth";
-
-type LayoutProps = {
-    children: ReactNode;
-};
-
 
 type NavItemType = {
     name: string;
@@ -92,7 +87,7 @@ const MenuItem = ({
     );
 };
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const navigate = useNavigate()
     const {mutate : logout , isPending} = useLogout();
@@ -144,7 +139,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <aside
                     className={`
                         fixed inset-y-0 left-0 z-50 w-64
-                        bg-purple-900 p-5 text-white flex flex-col
+                        bg-midnight p-5 text-white flex flex-col
                         transition-transform duration-200
                         md:sticky md:top-0 md:z-auto
                         md:h-screen md:translate-x-0
@@ -195,7 +190,7 @@ const Layout = ({ children }: LayoutProps) => {
 
                 {/* Main content */}
                 <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-                    {children}
+                    <Outlet />
                 </main>
             </div>
         </div>

@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import Layout from "../components/Layout";
 import RecentOrders from "../components/RecentOrders";
 import StatCard, { type StatCardProps, type Tone } from "../components/StatCard";
 import { useGetOmzet, useOrderStats, useRecentOrders } from "../hooks/useOrders";
@@ -61,10 +60,10 @@ console.log("Omzet type:", typeof omzet.data?.omzet);
   ];
 
   return (
-    <Layout>
+    <>
       <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:gap-6">
         {/* Banner */}
-        <section className="rounded-2xl bg-purple-600 p-5 text-white shadow-lg sm:p-6">
+        <section className="rounded-2xl bg-midnight p-5 text-white shadow-lg sm:p-6">
           <p className="text-sm text-indigo-100">Sistem internal Oma Laundry</p>
 
           <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -97,7 +96,7 @@ console.log("Omzet type:", typeof omzet.data?.omzet);
           onRetry={() => recent.refetch()}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

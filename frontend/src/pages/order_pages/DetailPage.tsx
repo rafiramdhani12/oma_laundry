@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import Layout from "../../components/Layout";
 import { useOrderDetail, useUpdateOrderStatus } from "../../hooks/useOrders";
 import { usePayOrder, type PaymentMethod } from "../../hooks/usePayment";
 import PrintReceiptButton from "../../components/PrintReceiptButton";
@@ -92,7 +91,7 @@ const DetailPage = () => {
   };
 
   return (
-    <Layout>
+    <>
       <section className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Detail Order</h1>
@@ -380,7 +379,7 @@ const DetailPage = () => {
           </>
         )}
       </section>
-    </Layout>
+    </>
   );
 };
 

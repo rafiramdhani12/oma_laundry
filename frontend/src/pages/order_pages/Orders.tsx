@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import Layout from "../../components/Layout";
 import StatusBadge from "../../components/StatusBadge";
 import { useOrders } from "../../hooks/useOrders";
 import { formatDate, formatRupiah } from "../../utils/format";
@@ -15,7 +14,7 @@ const Orders = () => {
   const { data: orders, isLoading, isError, refetch } = useOrders();
 
   return (
-    <Layout>
+    <>
       <section className="mx-auto max-w-6xl space-y-5">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -133,7 +132,7 @@ const Orders = () => {
           )}
         </div>
       </section>
-    </Layout>
+    </>
   );
 };
 

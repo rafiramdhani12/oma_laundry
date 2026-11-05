@@ -198,7 +198,7 @@ const Services = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <section className="mx-auto max-w-6xl space-y-5">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -574,7 +574,7 @@ const Services = () => {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 };
 
